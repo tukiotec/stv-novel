@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.log
+*.epub
+export_*.txt
+stv_database.sqlite
+temp_ipa_build/
+verify_*.png
+test_*.py

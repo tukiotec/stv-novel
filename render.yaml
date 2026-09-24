@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: stv-novel
+    env: docker
+    plan: free
+    region: singapore
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 8000

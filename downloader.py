@@ -1,0 +1,162 @@
+import asyncio
+import json
+import logging
+from typing import List, Tuple, Optional
+from PyQt6.QtCore import QThread, pyqtSignal
+
+from .api import clean_chapter_content
+from .db import STVDatabase
+
+logger = logging.getLogger("STVDownloader")
+
+class ChapterDownloaderWorker(QThread):
+    sig_progress = pyqtSignal(int, int, str)          # current, total, chapter_title
+    sig_chapter_saved = pyqtSignal(str, str, int)     # chapter_id, title, char_count
+    sig_status = pyqtSignal(str)                      # general status message
+    sig_finished = pyqtSignal(int, int)               # success_count, fail_count
+
+    def __init__(self, host: str, book_id: str, book_fk: int,
+                 chapters_to_download: List[Tuple[str, str]],
+                 db: STVDatabase,
+                 base_url: str = "http://14.225.254.182"):
+        super().__init__()
+        self.host = host
+        self.book_id = book_id
+        self.book_fk = book_fk
+        self.chapters = chapters_to_download
+        self.db = db
+        self.base_url = base_url
+        self._is_running = True
+
+    def stop(self):
+        self._is_running = False
+        self.sig_status.emit("Đang dừng quá trình tải...")
+
+    def run(self):
+        if not self.chapters:
+            self.sig_finished.emit(0, 0)
+            return
+
+        asyncio.run(self._async_download_loop())
+
+    async def _async_download_loop(self):
+        from playwright.async_api import async_playwright
+
+        success_count = 0
+        fail_count = 0
+        total = len(self.chapters)
+
+        self.sig_status.emit(f"Khởi động trình duyệt tải ngầm cho {total} chương...")
+
+        pw = None
+        browser = None
+        try:
+            pw = await async_playwright().start()
+            browser = await pw.chromium.launch(
+                executable_path=r'D:\ares_chromium_build\src\out\Release\chrome.exe',
+                headless=True,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--no-sandbox',
+                    '--disable-gpu'
+                ]
+            )
+
+            for idx, (c_id, c_title) in enumerate(self.chapters, start=1):
+                if not self._is_running:
+                    self.sig_status.emit("Đã tạm dừng tải theo yêu cầu.")
+                    break
+
+                self.sig_progress.emit(idx, total, c_title)
+                self.sig_status.emit(f"[{idx}/{total}] Đang tải: {c_title}...")
+
+                content = await self._fetch_single_chapter(browser, self.host, self.book_id, c_id)
+                if content:
+                    # Save to DB
+                    self.db.save_chapter_content(self.book_fk, c_id, content, c_title)
+                    success_count += 1
+                    self.sig_chapter_saved.emit(c_id, c_title, len(content))
+                else:
+                    fail_count += 1
+                    logger.warning(f"Failed to fetch chapter {c_id}: {c_title}")
+
+                # Micro pause to prevent rate limiting
+                await asyncio.sleep(0.3)
+
+        except Exception as e:
+            self.sig_status.emit(f"Lỗi phiên tải: {e}")
+            logger.error(f"Downloader loop exception: {e}")
+        finally:
+            if browser:
+                try:
+                    await browser.close()
+                except Exception:
+                    pass
+            if pw:
+                try:
+                    await pw.stop()
+                except Exception:
+                    pass
+
+        self.sig_status.emit(f"Hoàn tất tải: {success_count} thành công, {fail_count} thất bại.")
+        self.sig_finished.emit(success_count, fail_count)
+
+    async def _fetch_single_chapter(self, browser, host: str, book_id: str, chapter_id: str, timeout: int = 12) -> Optional[str]:
+        return await fetch_single_chapter_content(browser, host, book_id, chapter_id, self.base_url, timeout)
+
+async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "http://14.225.254.182", timeout: int = 12) -> Optional[str]:
+    ctx = None
+    try:
+        ctx = await browser.new_context(
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        )
+        await ctx.add_init_script('Object.defineProperty(navigator, "webdriver", { get: () => undefined });')
+        page = await ctx.new_page()
+
+        chapter_data = None
+        ev = asyncio.Event()
+
+        async def on_resp(res):
+            nonlocal chapter_data
+            if 'sajax' in res.url or 'readc' in res.url:
+                try:
+                    text = await res.text()
+                    if '"code":"0"' in text:
+                        chapter_data = json.loads(text)
+                        ev.set()
+                except Exception:
+                    pass
+
+        page.on('response', on_resp)
+        url = f"{base_url}/truyen/{host}/1/{book_id}/{chapter_id}/"
+
+        try:
+            await page.goto(url, wait_until='domcontentloaded', timeout=10000)
+        except Exception:
+            pass
+
+        # Simulate natural human mouse movement to trigger stv.readinit.js
+        for x, y in [(60, 60), (140, 140), (240, 240)]:
+            await page.mouse.move(x, y)
+            await asyncio.sleep(0.08)
+
+        try:
+            await asyncio.wait_for(ev.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            pass
+
+        if chapter_data and 'data' in chapter_data:
+            cleaned = clean_chapter_content(chapter_data['data'])
+            return cleaned
+        return None
+
+    except Exception as e:
+        logger.error(f"Error fetching chapter {chapter_id}: {e}")
+        return None
+    finally:
+        if ctx:
+            try:
+                await ctx.close()
+            except Exception:
+                pass
+

@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>STV Novel Studio</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="STV Novel">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #0f172a;
+            --card-bg: #f8fafc;
+            --border-color: #e2e8f0;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #15803d;
+            --success-bg: #dcfce7;
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-top: var(--safe-top);
+            padding-bottom: calc(var(--safe-bottom) + 72px);
+            user-select: text;
+        }
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .container {
+            padding: 14px 16px;
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .card:active {
+            transform: scale(0.99);
+        }
+        .book-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+            line-height: 1.35;
+        }
+        .book-author {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: var(--border-color);
+            color: #334155;
+        }
+        .badge.green {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+        .badge.blue {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .badge.orange {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+        .btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-green {
+            background: #10b981;
+        }
+        .btn-green:active {
+            background: #059669;
+        }
+        .btn-outline {
+            background: #fff;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn:active {
+            opacity: 0.85;
+        }
+
+        /* Bottom Tab Bar */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: calc(54px + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 100;
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            gap: 3px;
+            flex: 1;
+            height: 100%;
+        }
+        .tab-item.active {
+            color: var(--primary);
+        }
+        .tab-icon {
+            font-size: 18px;
+        }
+
+        /* Search Section UI */
+        .search-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 4px 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .search-bar-wrap:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+        }
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            padding: 8px 4px;
+            background: transparent;
+            color: #0f172a;
+        }
+        .btn-clear {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        /* Filter Accordion & Grid */
+        .filter-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e3a8a;
+            cursor: pointer;
+            user-select: none;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .filter-select {
+            padding: 7px 8px;
+            font-size: 13px;
+            color: #0f172a;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+        }
+        .filter-select:focus {
+            border-color: var(--primary);
+        }
+
+        /* Quick Chips */
+        .chips-scroll {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chips-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .quick-chip {
+            padding: 5px 10px;
+            background: #e2e8f0;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            white-space: nowrap;
+            cursor: pointer;
+            border: none;
+        }
+        .quick-chip:active {
+            background: #cbd5e1;
+        }
+
+        /* Search Results Card */
+        .result-card {
+            display: flex;
+            gap: 12px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .result-cover {
+            width: 75px;
+            height: 100px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #f1f5f9;
+            flex-shrink: 0;
+            border: 1px solid #e2e8f0;
+        }
+        .result-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .result-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.3;
+            margin-bottom: 3px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .result-author {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .result-badges {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .result-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* Download Panel Box */
+        .download-panel {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+        .download-panel-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .progress-box {
+            display: none;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .progress-bar-bg {
+            background: #e2e8f0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .progress-bar-fill {
+            background: #10b981;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Chapter List View */
+        .chapter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .chapter-row:active {
+            background: #f1f5f9;
+        }
+        .chapter-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            flex: 1;
+            padding-right: 8px;
+        }
+
+        /* Reader View */
+        .reader-body {
+            font-size: 19px;
+            line-height: 1.8;
+            color: #1e293b;
+            text-align: justify;
+        }
+        .reader-body p {
+            margin-bottom: 1.4em;
+            text-indent: 1.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP HEADER -->
+    <header>
+        <div class="header-title" id="top-title">📚 STV Novel Studio</div>
+        <div id="header-actions">
+            <button class="btn btn-outline btn-sm" onclick="switchTab('search')">🔍 Tìm Kiếm</button>
+        </div>
+    </header>
+
+    <!-- ==================== TAB 1: TỦ SÁCH (OFFLINE LIBRARY) ==================== -->
+    <div id="view-library" class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="font-size: 16px; font-weight: 800; color: #1e3a8a;">Tủ Sách Ngoại Tuyến</h2>
+            <span class="badge blue" id="lib-count-badge">0 truyện</span>
+        </div>
+
+        <!-- OFFLINE MOBILITY TIP BANNER -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 10px;">
+            <span style="font-size: 20px; line-height: 1;">✈️</span>
+            <div style="font-size: 12px; color: #166534; line-height: 1.5;">
+                <strong>Cầm iPhone ra ngoài đọc (100% không cần localhost/máy tính):</strong><br>
+                Sau khi tải xong, bấm vào truyện ➔ chọn <strong>"📖 Tải EPUB (Apple Books)"</strong> để mở vĩnh viễn vào app Sách có sẵn trên iPhone (tắt Wi-Fi/4G vẫn lật trang 3D đọc bình thường).
+            </div>
+        </div>
+
+        <div id="books-list">
+            <p style="color: #64748b; text-align: center; padding: 24px;">Đang nạp danh sách truyện...</p>
+        </div>
+    </div>
+
+    <!-- ==================== TAB 2: TÌM KIẾM TRUYỆN (FULL WEB FILTERS) ==================== -->
+    <div id="view-search" class="container" style="display: none;">
+        <!-- Search Input Bar -->
+        <div class="search-bar-wrap">
+            <span style="font-size: 16px; color: #64748b;">🔍</span>
+            <input type="text" id="search-keyword" class="search-input" placeholder="Nhập tên truyện, tác giả, từ khóa..." onkeydown="if(event.key==='Enter') doSearch();">
+            <button type="button" class="btn-clear" onclick="clearSearchInput()">✕</button>
+            <button type="button" class="btn btn-sm" onclick="doSearch()">Tìm</button>
+        </div>
+
+        <!-- Quick Sort Mode Chips -->
+        <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; -webkit-overflow-scrolling: touch;">
+            <button class="quick-chip" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; border: 1px solid #bfdbfe;" onclick="quickSort('viewweek')">📅 Top Đọc Tuần</button>
+            <button class="quick-chip" style="background: #fef3c7; color: #b45309; font-weight: 700; border: 1px solid #fde68a;" onclick="quickSort('viewday')">⚡ Top Đọc Ngày</button>
+            <button class="quick-chip" style="background: #f0fdf4; color: #15803d; font-weight: 700; border: 1px solid #bbf7d0;" onclick="quickSort('view')">🔥 Top Đọc Tổng</button>
+            <button class="quick-chip" style="background: #f1f5f9; color: #475569; font-weight: 700; border: 1px solid #e2e8f0;" onclick="quickSort('update')">🆕 Mới Cập Nhật</button>
+        </div>
+
+        <!-- Quick Hot Chips -->
+        <div class="chips-scroll">
+            <button class="quick-chip" onclick="quickSearch('Đấu La')">🔥 Đấu La</button>
+            <button class="quick-chip" onclick="quickSearch('Toàn Chức')">⚡ Toàn Chức</button>
+            <button class="quick-chip" onclick="quickSearch('Đô Thị')">🏙️ Đô Thị</button>
+            <button class="quick-chip" onclick="quickSearch('Huyền Huyễn')">🌀 Huyền Huyễn</button>
+            <button class="quick-chip" onclick="quickSearch('Trọng Sinh')">⏳ Trọng Sinh</button>
+            <button class="quick-chip" onclick="quickSearch('Vô Địch')">👑 Vô Địch</button>
+            <button class="quick-chip" onclick="quickSearch('Phàm Nhân')">⚔️ Phàm Nhân</button>
+            <button class="quick-chip" onclick="quickSearch('Hệ Thống')">🎮 Hệ Thống</button>
+        </div>
+
+        <!-- Advanced Filter Accordion Box -->
+        <div class="filter-panel">
+            <div class="filter-header" onclick="toggleFilterBox()">
+                <span>⚙️ BỘ LỌC CHUẨN WEB SÁNG TÁC VIỆT</span>
+                <span id="filter-toggle-icon" style="font-size: 11px; color: var(--primary);">[Ẩn / Mở] ▼</span>
+            </div>
+            
+            <div id="filter-content" class="filter-grid">
+                <!-- 1. Nguồn truyện (Host) -->
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-host">Nguồn Truyện (Host)</label>
+                    <select id="filter-host" class="filter-select">
+                        <option value="">[Tất cả nguồn]</option>
+                        <option value="qidian">Qidian (Khởi Điểm - VIP)</option>
+                        <option value="fanqie">Fanqie (Cà Chua - VIP)</option>
+                        <option value="faloo">Faloo (Phi Lư - Sảng văn)</option>
+                        <option value="69shu">69shu (Free - Đầy đủ)</option>
+                        <option value="ciweimao">Ciweimao (Đồng nhân)</option>
+                        <option value="jjwxc">Tấn Giang (Ngôn đam)</option>
+                        <option value="sfacg">SF Khinh Tiểu Thuyết</option>
+                        <option value="qimao">Thất Miêu (7 Mèo)</option>
+                        <option value="zongheng">Tung Hoành</option>
+                        <option value="uukanshu">UU Khán Thư</option>
+                        <option value="tadu">Tadu (Ngôn sảng)</option>
+                        <option value="biqubao">Bút Thú Các</option>
+                        <option value="linovel">Linovel</option>
+                        <option value="wenku8">Wenku8</option>
+                    </select>
+                </div>
+
+                <!-- 2. Thể loại (Category) -->
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-category">Thể Loại</label>
+                    <select id="filter-category" class="filter-select">
+                        <option value="">[Tất cả thể loại]</option>
+                        <option value="hh">Huyền huyễn</option>
+                        <option value="dt">Đô thị</option>
+                        <option value="dn">Đồng nhân</option>
+                        <option value="kh">Khoa học viễn tưởng</option>
+                        <option value="ls">Lịch sử</option>
+                        <option value="vd">Võng du</option>
+                        <option value="nt">Ngôn tình</option>
+                        <option value="dna">Dị năng</option>
+                        <option value="ld">Linh dị</option>
+                        <option value="ln">Light Novel</option>
+                    </select>
+                </div>
+
+                <!-- 3. Sắp xếp (Sort) -->
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-sort">Sắp Xếp</label>
+                    <select id="filter-sort" class="filter-select">
+                        <option value="viewweek">📅 Lượt đọc tuần (Top Tuần)</option>
+                        <option value="viewday">⚡ Lượt đọc ngày (Top Ngày)</option>
+                        <option value="view">🔥 Lượt đọc nhiều nhất (Top Tổng)</option>
+                        <option value="update">Mới cập nhật</option>
+                        <option value="new">Mới nhập kho</option>
+                        <option value="like">Lượt thích nhiều</option>
+                        <option value="following">Lượt theo dõi</option>
+                        <option value="auto">Đề cử</option>
+                    </select>
+                </div>
+
+                <!-- 4. Trạng thái (Status) -->
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-step">Trạng Thái</label>
+                    <select id="filter-step" class="filter-select">
+                        <option value="">[Tất cả]</option>
+                        <option value="1">Còn tiếp (Đang ra)</option>
+                        <option value="3">Hoàn thành (Full)</option>
+                        <option value="2">Tạm ngưng</option>
+                        <option value="5">Không tạm ngưng</option>
+                    </select>
+                </div>
+
+                <!-- 5. Số chương tối thiểu (Minc) -->
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-minc">Số Chương Tối Thiểu</label>
+                    <select id="filter-minc" class="filter-select">
+                        <option value="0">[Tất cả số chương]</option>
+                        <option value="50">&gt; 50 chương</option>
+                        <option value="100">&gt; 100 chương</option>
+                        <option value="200">&gt; 200 chương</option>
+                        <option value="500">&gt; 500 chương</option>
+                        <option value="1000">&gt; 1000 chương</option>
+                        <option value="1500">&gt; 1500 chương</option>
+                        <option value="2000">&gt; 2000 chương</option>
+                    </select>
+                </div>
+
+                <!-- 6. Phân loại (Type) -->
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-type">Phân Loại</label>
+                    <select id="filter-type" class="filter-select">
+                        <option value="">[Tất cả]</option>
+                        <option value="dich">Truyện dịch</option>
+                        <option value="sangtac">Truyện sáng tác</option>
+                        <option value="txt">Txt dịch tự động</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button type="button" class="btn btn-sm" style="flex: 2;" onclick="doSearch()">🔍 Áp Dụng & Tìm Kiếm</button>
+                <button type="button" class="btn btn-outline btn-sm" style="flex: 1;" onclick="resetSearchFilters()">🔄 Đặt Lại</button>
+            </div>
+        </div>
+
+        <!-- Search Status & Results Container -->
+        <div id="search-status-bar" style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 10px;">
+            Nhập từ khóa hoặc chọn bộ lọc rồi nhấn Tìm.
+        </div>
+        <div id="search-results-list"></div>
+    </div>
+
+    <!-- ==================== TAB 3: THÊM LINK TRỰC TIẾP ==================== -->
+    <div id="view-add-link" class="container" style="display: none;">
+        <h2 style="font-size: 16px; font-weight: 800; color: #1e3a8a; margin-bottom: 12px;">Thêm Truyện Bằng Link Hoặc Mã</h2>
+        <div class="card" style="cursor: default;">
+            <p style="font-size: 13px; color: #475569; margin-bottom: 10px;">
+                Dán link truyện Sáng Tác Việt (hoặc định dạng <code>host/book_id</code>):
+            </p>
+            <input type="text" id="input-direct-url" class="search-input" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fff;" placeholder="http://14.225.254.182/truyen/qidian/1/1050754857/">
+            <button class="btn" style="width: 100%; padding: 12px;" onclick="submitDirectUrl()">➕ Nạp Truyện Vào Tủ Sách</button>
+            <div style="margin-top: 14px; font-size: 12px; color: #64748b; line-height: 1.5;">
+                <strong>Ví dụ hợp lệ:</strong><br>
+                • <code>http://14.225.254.182/truyen/qidian/1/1050754857/</code><br>
+                • <code>http://14.225.254.182/truyen/fanqie/1/7086884617154219016/</code><br>
+                • <code>qidian/1050754857</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== VIEW: CHI TIẾT & TRUNG TÂM TẢI ==================== -->
+    <div id="view-chapters" class="container" style="display: none;">
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px;">
+            <button class="btn btn-outline btn-sm" onclick="backFromChapters()">⬅ Quay lại</button>
+            <div id="active-book-title" style="font-weight: 700; font-size: 15px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            <button class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 10px; font-size: 12px;" onclick="deleteCurrentBook()">🗑️ Xóa Truyện</button>
+        </div>
+
+        <!-- HƯỚNG DẪN CẦM RA NGOÀI ĐỌC OFFLINE -->
+        <div style="background: #f8fafc; border: 1.5px solid #059669; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;">
+            <div style="font-size: 13px; font-weight: 800; color: #065f46; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <span>✈️ CẦM IPHONE RA NGOÀI ĐỌC (KHÔNG CẦN LOCALHOST / WI-FI)</span>
+            </div>
+            <p style="font-size: 12px; color: #334155; line-height: 1.4; margin-bottom: 8px;">
+                Sau khi tải chương xong, Sếp bấm nút bên dưới để mang ra ngoài đọc trọn đời:
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button class="btn btn-green btn-sm" style="padding: 10px 8px; font-size: 12px; line-height: 1.2;" onclick="downloadEpub()">
+                    📖 Tải EPUB Vào<br>App Sách (Apple)
+                </button>
+                <button class="btn btn-sm" style="background: #4f46e5; padding: 10px 8px; font-size: 12px; line-height: 1.2;" onclick="syncToPhoneOffline()">
+                    📱 Lưu Vào Bộ Nhớ<br>Trình Duyệt iPhone
+                </button>
+            </div>
+        </div>
+
+        <!-- BỘ CÔNG CỤ TẢI XUỐNG DÀNH RIÊNG CHO IPHONE -->
+        <div class="download-panel">
+            <div class="download-panel-title">⚡ TRUNG TÂM TẢI TRUYỆN VỀ IPHONE</div>
+            
+            <!-- TẢI THEO KHOẢNG CHƯƠNG -->
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+                <div style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">TẢI THEO KHOẢNG CHƯƠNG:</div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                    <span style="font-size: 13px; color: #475569;">Từ:</span>
+                    <input id="input-range-from" type="number" value="1" min="1" style="width: 65px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: center;">
+                    <span style="font-size: 13px; color: #475569;">Đến:</span>
+                    <input id="input-range-to" type="number" value="50" min="1" style="width: 65px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: center;">
+                    <button class="btn btn-sm" style="flex: 1; padding: 8px;" onclick="triggerDownloadRange()">
+                        ⬇ Tải Khoảng
+                    </button>
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 11px; color: #64748b; align-self: center;">Nhanh:</span>
+                    <button class="badge" onclick="setDlRange(1, 20)">1 - 20</button>
+                    <button class="badge" onclick="setDlRange(1, 50)">1 - 50</button>
+                    <button class="badge" onclick="setDlRange(1, 100)">1 - 100</button>
+                    <button class="badge" onclick="setDlRangeAll()">Toàn Bộ</button>
+                </div>
+            </div>
+
+            <div class="action-grid">
+                <button class="btn btn-green btn-sm" id="btn-dl-missing" onclick="triggerDownload('missing')">⬇ Tải Chương Thiếu</button>
+                <button class="btn btn-sm" style="background: #0284c7;" onclick="triggerDownload('all')">⬇ Tải Toàn Bộ</button>
+            </div>
+
+            <div class="action-grid">
+                <button class="btn btn-sm" style="background: #059669;" onclick="downloadEpub()">📖 Tải EPUB (Apple Books)</button>
+                <button class="btn btn-outline btn-sm" onclick="downloadTxt()">📥 Tải File TXT</button>
+            </div>
+
+            <button class="btn" style="width: 100%; background: #4f46e5; margin-top: 4px; font-size: 13px;" onclick="syncToPhoneOffline()">
+                📱 Lưu Hết Vào Bộ Nhớ iPhone (Đọc Không Cần Wi-Fi)
+            </button>
+
+            <!-- Real-time Progress Bar -->
+            <div class="progress-box" id="dl-progress-box">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="dl-progress-fill"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #475569;">
+                    <span id="dl-progress-text">Đang tải...</span>
+                    <button style="border: none; background: transparent; color: #dc2626; font-weight: 700;" onclick="cancelDl()">Dừng</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 13px; font-weight: 700; color: #1e3a8a;" id="chapters-stat">0 / 0 chương đã lưu</div>
+            <div style="font-size: 11px; color: #059669; font-weight: 600;" id="phone-storage-stat">Bộ nhớ máy: 0 chương</div>
+        </div>
+        <div id="chapters-list" style="background: #fff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;"></div>
+    </div>
+
+    <!-- ==================== VIEW: TRÌNH ĐỌC TRUYỆN OFFLINE CAO CẤP ==================== -->
+    <div id="view-reader" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:100000; flex-direction:column; background:#fbf0d9; color:#2d241e; overflow:hidden;">
+        <!-- TOP APP BAR -->
+        <div id="reader-top-bar" style="position:fixed; top:0; left:0; right:0; padding:calc(env(safe-area-inset-top, 20px) + 8px) 16px 10px 16px; background:rgba(251,240,217,0.96); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(0,0,0,0.08); display:flex; justify-content:space-between; align-items:center; z-index:100002; transition:transform 0.25s ease;">
+            <button class="btn btn-outline btn-sm" onclick="goChapters()">⬅ Mục lục</button>
+            <div id="reader-chapter-title" style="font-size:13px; font-weight:700; max-width:55%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0.85;">Chương</div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-outline btn-sm" onclick="toggleDrawer()">📑</button>
+                <button class="btn btn-outline btn-sm" onclick="toggleSettings()">Aa</button>
+            </div>
+        </div>
+
+        <!-- MAIN READING SCROLL AREA -->
+        <div id="reader-scroll-area" style="flex:1; overflow-y:auto; padding:calc(env(safe-area-inset-top, 20px) + 60px) 20px calc(env(safe-area-inset-bottom, 20px) + 65px) 20px; font-size:19px; line-height:1.8; text-align:justify;">
+            <div id="reader-header-title" style="font-size:22px; font-weight:800; text-align:center; margin-bottom:24px; padding-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.08);">Chương</div>
+            <div id="reader-content" class="reader-body">Đang tải nội dung...</div>
+            <div style="display:flex; justify-content:space-between; gap:12px; margin-top:40px; padding-top:20px; border-top:1px solid rgba(0,0,0,0.08);">
+                <button class="btn btn-outline" id="btn-content-prev" style="flex:1; padding:12px;" onclick="prevChapter()">⏮ Chương Trước</button>
+                <button class="btn" id="btn-content-next" style="flex:1; padding:12px;" onclick="nextChapter()">Chương Sau ⏭</button>
+            </div>
+        </div>
+
+        <!-- BOTTOM APP BAR -->
+        <div id="reader-bottom-bar" style="position:fixed; bottom:0; left:0; right:0; padding:10px 16px calc(env(safe-area-inset-bottom, 20px) + 8px) 16px; background:rgba(251,240,217,0.96); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-top:1px solid rgba(0,0,0,0.08); display:flex; justify-content:space-between; align-items:center; z-index:100002; transition:transform 0.25s ease;">
+            <button class="btn btn-outline btn-sm" id="btn-prev-chap" onclick="prevChapter()">⏮ Trước</button>
+            <button id="btn-auto-scroll" class="btn btn-sm" style="background:#10b981;" onclick="toggleAutoScroll()">▶ Tự Cuộn</button>
+            <button class="btn btn-sm" id="btn-next-chap" onclick="nextChapter()">Sau ⏭</button>
+        </div>
+
+        <!-- SETTINGS SHEET (Aa) -->
+        <div id="reader-settings-sheet" style="position:fixed; bottom:0; left:0; right:0; background:#ffffff; color:#0f172a; border-top-left-radius:20px; border-top-right-radius:20px; box-shadow:0 -10px 30px rgba(0,0,0,0.3); z-index:100005; padding:20px 20px calc(env(safe-area-inset-bottom, 20px) + 15px) 20px; display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <span style="font-size:15px; font-weight:800;">⚙️ Cài Đặt Giao Diện Đọc</span>
+                <button style="background:none; border:none; font-size:18px; font-weight:bold; cursor:pointer;" onclick="toggleSettings()">✕</button>
+            </div>
+            <!-- THEMES -->
+            <div style="margin-bottom:14px;">
+                <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">MÀU NỀN TRANG:</div>
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
+                    <button class="btn btn-outline btn-sm" onclick="setReaderTheme('sepia')" style="background:#fbf0d9; color:#2d241e; border:2px solid #e5d5be;">Giấy Vàng</button>
+                    <button class="btn btn-outline btn-sm" onclick="setReaderTheme('white')" style="background:#ffffff; color:#0f172a; border:2px solid #cbd5e1;">Sáng</button>
+                    <button class="btn btn-outline btn-sm" onclick="setReaderTheme('dark')" style="background:#1e293b; color:#f1f5f9; border:2px solid #334155;">Xám</button>
+                    <button class="btn btn-outline btn-sm" onclick="setReaderTheme('oled')" style="background:#000000; color:#94a3b8; border:2px solid #333333;">OLED</button>
+                </div>
+            </div>
+            <!-- FONT SIZE -->
+            <div style="margin-bottom:14px;">
+                <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">CỠ CHỮ:</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="btn btn-outline" style="flex:1;" onclick="adjustFontSize(-2)">A -</button>
+                    <span id="font-size-label" style="font-weight:700; font-size:15px; width:45px; text-align:center;">19px</span>
+                    <button class="btn btn-outline" style="flex:1;" onclick="adjustFontSize(2)">A +</button>
+                </div>
+            </div>
+            <!-- LINE SPACING -->
+            <div>
+                <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">GIÃN DÒNG:</div>
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                    <button class="btn btn-outline btn-sm" onclick="setLineSpacing(1.5)">1.5x Dày</button>
+                    <button class="btn btn-outline btn-sm" onclick="setLineSpacing(1.8)">1.8x Vừa</button>
+                    <button class="btn btn-outline btn-sm" onclick="setLineSpacing(2.2)">2.2x Thoáng</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DRAWER SHEET (📑) -->
+        <div id="reader-drawer-sheet" style="position:fixed; top:0; bottom:0; left:0; width:80%; max-width:320px; background:#ffffff; color:#0f172a; border-right:1px solid #e2e8f0; box-shadow:10px 0 30px rgba(0,0,0,0.3); z-index:100005; display:none; flex-direction:column; padding-top:calc(env(safe-area-inset-top, 20px) + 10px);">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e2e8f0;">
+                <span style="font-size:15px; font-weight:800;">📑 Danh Sách Chương</span>
+                <button style="background:none; border:none; font-size:18px; font-weight:bold; cursor:pointer;" onclick="toggleDrawer()">✕</button>
+            </div>
+            <div id="reader-drawer-list" style="flex:1; overflow-y:auto; padding:10px 14px;"></div>
+        </div>
+    </div>
+
+    <!-- ==================== BOTTOM TAB BAR ==================== -->
+    <div class="tab-bar">
+        <div class="tab-item active" id="tab-nav-lib" onclick="switchTab('lib')">
+            <span class="tab-icon">📚</span>
+            <span>Tủ Sách</span>
+        </div>
+        <div class="tab-item" id="tab-nav-search" onclick="switchTab('search')">
+            <span class="tab-icon">🔍</span>
+            <span>Tìm Kiếm</span>
+        </div>
+        <div class="tab-item" id="tab-nav-add" onclick="switchTab('add')">
+            <span class="tab-icon">🔗</span>
+            <span>Thêm Link</span>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT APP LOGIC ==================== -->
+    <script>
+        let currentTab = 'lib';
+        let previousTab = 'lib';
+        let currentBookId = null;
+        let currentChapters = [];
+        let currentChapIndex = -1;
+        let readerFontSize = 19;
+        let readerLineHeight = 1.8;
+        let pollTimer = null;
+        let autoScrollInterval = null;
+        let isAutoScrolling = false;
+
+        let searchCurrentPage = 1;
+        let searchCurrentParams = null;
+        let searchTotalLoaded = 0;
+        let isLoadingMore = false;
+
+        const CACHE_PREFIX = "stv_chap_";
+
+        // Navigation tab switcher
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+            
+            // Hide all main containers
+            document.getElementById('view-library').style.display = 'none';
+            document.getElementById('view-search').style.display = 'none';
+            document.getElementById('view-add-link').style.display = 'none';
+            document.getElementById('view-chapters').style.display = 'none';
+            document.getElementById('view-reader').style.display = 'none';
+
+            if (tab === 'lib') {
+                document.getElementById('tab-nav-lib').classList.add('active');
+                document.getElementById('view-library').style.display = 'block';
+                loadLibrary();
+            } else if (tab === 'search') {
+                document.getElementById('tab-nav-search').classList.add('active');
+                document.getElementById('view-search').style.display = 'block';
+            } else if (tab === 'add') {
+                document.getElementById('tab-nav-add').classList.add('active');
+                document.getElementById('view-add-link').style.display = 'block';
+            }
+        }
+
+        // Toggle advanced filter box
+        function toggleFilterBox() {
+            const box = document.getElementById('filter-content');
+            const icon = document.getElementById('filter-toggle-icon');
+            if (box.style.display === 'none') {
+                box.style.display = 'grid';
+                icon.innerText = '[Ẩn / Mở] ▲';
+            } else {
+                box.style.display = 'none';
+                icon.innerText = '[Ẩn / Mở] ▼';
+            }
+        }
+
+        function clearSearchInput() {
+            document.getElementById('search-keyword').value = '';
+            document.getElementById('search-keyword').focus();
+        }
+
+        function quickSearch(kw) {
+            document.getElementById('search-keyword').value = kw;
+            doSearch();
+        }
+
+        function quickSort(sortMode) {
+            document.getElementById('filter-sort').value = sortMode;
+            doSearch();
+        }
+
+        function resetSearchFilters() {
+            document.getElementById('filter-host').value = '';
+            document.getElementById('filter-category').value = '';
+            document.getElementById('filter-sort').value = 'viewweek';
+            document.getElementById('filter-step').value = '';
+            document.getElementById('filter-minc').value = '0';
+            document.getElementById('filter-type').value = '';
+        }
+
+        function renderSearchResultCard(b, idx) {
+            const hostLabel = (b.host || 'STV').toUpperCase();
+            const safeCover = b.cover_url || '/icon.png';
+            const titleSafe = (b.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const authorSafe = (b.author || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            
+            return `
+                <div class="result-card">
+                    <img class="result-cover" src="${safeCover}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/icon.png';" alt="Cover">
+                    <div class="result-info">
+                        <div>
+                            <div class="result-title">${b.title}</div>
+                            <div class="result-author">Tác giả: ${b.author || 'Chưa rõ'}</div>
+                            <div class="result-badges" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px;">
+                                <span class="badge blue">${hostLabel}</span>
+                                ${b.chapters ? `<span class="badge green" style="font-weight: 700;">📖 ${b.chapters} ch</span>` : ''}
+                                ${b.views ? `<span class="badge" style="background: #f1f5f9; color: #1e293b; font-weight: 700;">👁️ ${b.views}</span>` : ''}
+                                ${b.likes ? `<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">👍 ${b.likes}</span>` : ''}
+                                ${b.status ? `<span class="badge orange">${b.status}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="result-actions">
+                            <button class="btn btn-sm btn-outline" id="btn-add-${idx}" onclick="addBookFromSearch(this, '${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">➕ Thêm Tủ</button>
+                            <button class="btn btn-sm" style="background:#0284c7;" onclick="actionDownloadFromSearch('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">⬇ Tải Ngay</button>
+                            <button class="btn btn-sm btn-green" onclick="actionReadFromSearch('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">📖 Đọc</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Search Executor
+        async function doSearch() {
+            const query = document.getElementById('search-keyword').value.trim();
+            const host = document.getElementById('filter-host').value;
+            const category = document.getElementById('filter-category').value;
+            const sort = document.getElementById('filter-sort').value;
+            const step = document.getElementById('filter-step').value;
+            const minc = document.getElementById('filter-minc').value;
+            const typeVal = document.getElementById('filter-type').value;
+
+            const statusBar = document.getElementById('search-status-bar');
+            const listEl = document.getElementById('search-results-list');
+
+            searchCurrentPage = 1;
+            searchTotalLoaded = 0;
+            isLoadingMore = false;
+
+            statusBar.innerHTML = '⏳ Đang quét kho truyện Sáng Tác Việt theo bộ lọc...';
+            listEl.innerHTML = '<p style="color: #64748b; text-align: center; padding: 30px;">Đang tải kết quả...</p>';
+
+            const params = new URLSearchParams();
+            if (query) params.append('query', query);
+            if (host) params.append('host', host);
+            if (category) params.append('category', category);
+            if (sort) params.append('sort', sort);
+            if (step) params.append('step', step);
+            if (minc && minc !== '0') params.append('minc', minc);
+            if (typeVal) params.append('type_val', typeVal);
+            params.append('page', 1);
+
+            searchCurrentParams = params;
+
+            try {
+                const res = await fetch(`/api/search?${params.toString()}`);
+                const data = await res.json();
+                const items = data.results || [];
+
+                if (!items.length) {
+                    statusBar.innerHTML = '❌ Không tìm thấy truyện nào khớp bộ lọc!';
+                    listEl.innerHTML = '<div class="card" style="text-align: center; padding: 24px; color: #64748b;">Không có kết quả nào. Hãy thử đổi từ khóa hoặc đặt lại bộ lọc.</div>';
+                    return;
+                }
+
+                searchTotalLoaded = items.length;
+                statusBar.innerHTML = `✅ Đang hiển thị <strong>${searchTotalLoaded}</strong> truyện (Trang 1):`;
+                
+                let cardsHtml = items.map((b, idx) => renderSearchResultCard(b, idx)).join('');
+                
+                if (items.length >= 48) {
+                    cardsHtml += `
+                        <div id="load-more-container" style="text-align: center; margin: 16px 0 24px 0;">
+                            <button class="btn" id="btn-load-more" style="width: 100%; padding: 13px; font-size: 14px; background: #0284c7;" onclick="loadMoreSearchResults()">
+                                ⏬ Tải Thêm 48 Truyện Nữa (Trang 2)
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    cardsHtml += `
+                        <div style="text-align: center; color: #64748b; font-size: 13px; padding: 14px;">
+                            ✅ Đã tải toàn bộ kết quả phù hợp!
+                        </div>
+                    `;
+                }
+                listEl.innerHTML = cardsHtml;
+
+            } catch (err) {
+                statusBar.innerHTML = '⚠️ Lỗi kết nối khi tìm kiếm: ' + err;
+                listEl.innerHTML = `<div class="card" style="color: #dc2626; padding: 16px;">Lỗi: ${err}</div>`;
+            }
+        }
+
+        // Load More Search Results (Pagination)
+        async function loadMoreSearchResults() {
+            if (isLoadingMore || !searchCurrentParams) return;
+            isLoadingMore = true;
+
+            const btn = document.getElementById('btn-load-more');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = '⏳ Đang nạp thêm 48 truyện tiếp theo...';
+            }
+
+            searchCurrentPage++;
+            searchCurrentParams.set('page', searchCurrentPage);
+
+            try {
+                const res = await fetch(`/api/search?${searchCurrentParams.toString()}`);
+                const data = await res.json();
+                const newItems = data.results || [];
+                const loadMoreBox = document.getElementById('load-more-container');
+
+                if (newItems.length > 0) {
+                    const startIdx = searchTotalLoaded;
+                    searchTotalLoaded += newItems.length;
+
+                    const newHtml = newItems.map((b, idx) => renderSearchResultCard(b, startIdx + idx)).join('');
+                    
+                    if (loadMoreBox) {
+                        loadMoreBox.insertAdjacentHTML('beforebegin', newHtml);
+                    } else {
+                        document.getElementById('search-results-list').insertAdjacentHTML('beforeend', newHtml);
+                    }
+
+                    const statusBar = document.getElementById('search-status-bar');
+                    statusBar.innerHTML = `✅ Đang hiển thị <strong>${searchTotalLoaded}</strong> truyện (Trang 1 - ${searchCurrentPage}):`;
+
+                    if (newItems.length >= 48) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = `⏬ Tải Thêm 48 Truyện Nữa (Trang ${searchCurrentPage + 1})`;
+                        }
+                    } else {
+                        if (loadMoreBox) {
+                            loadMoreBox.innerHTML = `
+                                <div style="text-align: center; color: #64748b; font-size: 13px; padding: 14px;">
+                                    ✅ Đã tải hết toàn bộ truyện trong danh mục này!
+                                </div>
+                            `;
+                        }
+                    }
+                } else {
+                    if (loadMoreBox) {
+                        loadMoreBox.innerHTML = `
+                            <div style="text-align: center; color: #64748b; font-size: 13px; padding: 14px;">
+                                ✅ Đã tới trang cuối cùng của kho truyện!
+                            </div>
+                        `;
+                    }
+                }
+            } catch (err) {
+                alert('Lỗi tải thêm truyện: ' + err);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = `Thử lại trang ${searchCurrentPage}`;
+                }
+            } finally {
+                isLoadingMore = false;
+            }
+        }
+
+        // Add book from search card
+        async function addBookFromSearch(btn, host, bookId, title, author, coverUrl) {
+            btn.disabled = true;
+            btn.innerText = 'Đang thêm...';
+            try {
+                const res = await fetch('/api/add_book', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({host, book_id: bookId, title, author, cover_url: coverUrl})
+                });
+                const d = await res.json();
+                if (d.status === 'success') {
+                    btn.innerText = '✅ Đã Trong Tủ';
+                    btn.classList.remove('btn-outline');
+                    btn.classList.add('btn-green');
+                } else {
+                    btn.disabled = false;
+                    btn.innerText = 'Thử lại';
+                    alert('Lỗi: ' + d.detail);
+                }
+            } catch(e) {
+                btn.disabled = false;
+                btn.innerText = 'Thử lại';
+                alert('Lỗi: ' + e);
+            }
+        }
+
+        // Add & jump to download center
+        async function actionDownloadFromSearch(host, bookId, title, author, coverUrl) {
+            try {
+                const res = await fetch('/api/add_book', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({host, book_id: bookId, title, author, cover_url: coverUrl})
+                });
+                const d = await res.json();
+                if (d.book_id) {
+                    previousTab = 'search';
+                    openBook(d.book_id);
+                }
+            } catch(e) {
+                alert('Lỗi nạp truyện: ' + e);
+            }
+        }
+
+        // Add & jump to reader
+        async function actionReadFromSearch(host, bookId, title, author, coverUrl) {
+            try {
+                const res = await fetch('/api/add_book', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({host, book_id: bookId, title, author, cover_url: coverUrl})
+                });
+                const d = await res.json();
+                if (d.book_id) {
+                    previousTab = 'search';
+                    await openBook(d.book_id);
+                    if (currentChapters.length > 0) {
+                        readChapter(0);
+                    }
+                }
+            } catch(e) {
+                alert('Lỗi nạp truyện: ' + e);
+            }
+        }
+
+        // Submit Direct URL Tab
+        async function submitDirectUrl() {
+            const url = document.getElementById('input-direct-url').value.trim();
+            if (!url) {
+                alert('Vui lòng nhập link truyện hoặc cú pháp host/book_id');
+                return;
+            }
+            try {
+                const res = await fetch('/api/add_book', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const d = await res.json();
+                if (d.status === 'success') {
+                    alert(`Đã thêm thành công: ${d.title} (${d.total} chương)`);
+                    document.getElementById('input-direct-url').value = '';
+                    switchTab('lib');
+                } else {
+                    alert('Lỗi: ' + d.detail);
+                }
+            } catch(e) {
+                alert('Lỗi kết nối: ' + e);
+            }
+        }
+
+        // Load Offline Library
+        async function loadLibrary() {
+            let books = [];
+            let isOffline = false;
+            try {
+                const res = await fetch('/api/books');
+                books = await res.json();
+                localStorage.setItem('stv_cached_books', JSON.stringify(books));
+            } catch(e) {
+                isOffline = true;
+                const local = localStorage.getItem('stv_cached_books');
+                if (local) {
+                    try { books = JSON.parse(local); } catch(err) {}
+                }
+            }
+
+            const list = document.getElementById('books-list');
+            const badge = document.getElementById('lib-count-badge');
+            badge.innerText = `${books.length} truyện` + (isOffline ? ' (Ngoại tuyến)' : '');
+
+            if (!books.length) {
+                list.innerHTML = `
+                    <div class="card" style="text-align: center; padding: 32px 16px;">
+                        <div style="font-size: 36px; margin-bottom: 8px;">📖</div>
+                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px;">Chưa có truyện nào trong tủ sách</div>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Hãy tìm kiếm truyện hoặc thêm link để tải về máy.</p>
+                        <button class="btn" onclick="switchTab('search')">🔍 Tìm Kiếm Truyện Ngay</button>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = books.map(b => {
+                const hostLabel = (b.host || 'STV').toUpperCase();
+                const safeCover = b.cover_url || '/icon.png';
+                const titleSafe = (b.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const dlPct = b.total_chapters > 0 ? Math.round((b.downloaded_count / b.total_chapters) * 100) : 0;
+                return `
+                    <div class="result-card" onclick="openBook(${b.id})">
+                        <img class="result-cover" src="${safeCover}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/icon.png';" alt="Cover">
+                        <div class="result-info">
+                            <div>
+                                <div class="result-title">${b.title}</div>
+                                <div class="result-author">Tác giả: ${b.author || 'Chưa rõ'}</div>
+                                <div class="result-badges">
+                                    <span class="badge blue">${hostLabel}</span>
+                                    <span class="badge ${b.downloaded_count > 0 ? 'green' : ''}">
+                                        ${b.downloaded_count || 0} / ${b.total_chapters || 0} chương (${dlPct}%)
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                <button class="btn btn-sm btn-outline" style="padding: 5px 12px;" onclick="event.stopPropagation(); openBook(${b.id})">📖 Xem & Tải</button>
+                                <button class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 12px;" onclick="deleteBook(event, ${b.id}, '${titleSafe}')">🗑️ Xóa</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Delete book handler
+        async function deleteBook(event, bookId, bookTitle) {
+            if (event) event.stopPropagation();
+            if (!confirm(`Bạn có chắc chắn muốn xóa truyện "${bookTitle || 'này'}" khỏi tủ sách không?`)) {
+                return;
+            }
+            try {
+                const res = await fetch(`/api/delete_book/${bookId}`, { method: 'POST' });
+                const data = await res.json();
+                
+                // Clear all cached chapters from iPhone localStorage
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(`${CACHE_PREFIX}${bookId}_`)) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                
+                alert(data.message || 'Đã xóa truyện khỏi tủ sách thành công!');
+                
+                if (currentBookId === bookId && document.getElementById('view-chapters').style.display === 'block') {
+                    currentBookId = null;
+                    switchTab('lib');
+                } else {
+                    loadLibrary();
+                }
+            } catch(e) {
+                alert('Lỗi khi xóa truyện: ' + e);
+            }
+        }
+
+        async function deleteCurrentBook() {
+            if (!currentBookId) return;
+            const title = document.getElementById('active-book-title').innerText;
+            await deleteBook(null, currentBookId, title);
+        }
+
+        // Open Book Details / Download Center
+        async function openBook(bookId) {
+            currentBookId = bookId;
+            document.getElementById('view-library').style.display = 'none';
+            document.getElementById('view-search').style.display = 'none';
+            document.getElementById('view-add-link').style.display = 'none';
+            document.getElementById('view-reader').style.display = 'none';
+            document.getElementById('view-chapters').style.display = 'block';
+
+            await refreshChaptersList();
+            checkDownloadStatus();
+        }
+
+        function backFromChapters() {
+            document.getElementById('view-chapters').style.display = 'none';
+            switchTab(previousTab || 'lib');
+        }
+
+        async function refreshChaptersList() {
+            let data = null;
+            let isOffline = false;
+            try {
+                const res = await fetch(`/api/book/${currentBookId}`);
+                data = await res.json();
+                localStorage.setItem(`stv_cached_book_${currentBookId}`, JSON.stringify(data));
+            } catch(e) {
+                isOffline = true;
+                const local = localStorage.getItem(`stv_cached_book_${currentBookId}`);
+                if (local) {
+                    try { data = JSON.parse(local); } catch(err) {}
+                }
+            }
+
+            if (!data) {
+                alert('Không có kết nối tới server máy tính và chưa có dữ liệu lưu ngoại tuyến!');
+                return;
+            }
+
+            document.getElementById('active-book-title').innerText = data.book.title + (isOffline ? ' (Ngoại tuyến)' : '');
+            currentChapters = data.chapters || [];
+            
+            const dlCount = currentChapters.filter(c => c.is_downloaded).length;
+            document.getElementById('chapters-stat').innerText = isOffline 
+                ? `${currentChapters.length} chương (Chế độ ngoại tuyến)`
+                : `${dlCount} / ${currentChapters.length} chương đã lưu vào DB`;
+
+            // Check how many are saved locally on this iPhone
+            let phoneCached = 0;
+            currentChapters.forEach(c => {
+                if (localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`)) {
+                    phoneCached++;
+                }
+            });
+            document.getElementById('phone-storage-stat').innerText = `iPhone lưu: ${phoneCached} chương`;
+
+            const list = document.getElementById('chapters-list');
+            list.innerHTML = currentChapters.map((c, idx) => {
+                const isLocal = !!localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`);
+                const badgeText = isLocal ? '✅ Máy iPhone' : (c.is_downloaded ? '📥 Đã tải DB' : '⏳ Chưa tải');
+                const badgeClass = isLocal || c.is_downloaded ? 'green' : '';
+                return `
+                    <div class="chapter-row" onclick="readChapter(${idx})">
+                        <div class="chapter-name">${c.chapter_title}</div>
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Download triggers
+        async function triggerDownload(mode) {
+            if (!currentBookId) return;
+            try {
+                const res = await fetch(`/api/start_download/${currentBookId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mode})
+                });
+                const d = await res.json();
+                if (d.status === 'started' || d.status === 'running') {
+                    document.getElementById('dl-progress-box').style.display = 'block';
+                    pollDownloadProgress();
+                } else {
+                    alert(d.message);
+                }
+            } catch(e) {
+                alert('Lỗi khởi động tải: ' + e);
+            }
+        }
+
+        async function triggerDownloadRange() {
+            if (!currentBookId) return;
+            const fromIdx = parseInt(document.getElementById('input-range-from').value) || 1;
+            const toIdx = parseInt(document.getElementById('input-range-to').value) || 50;
+            if (fromIdx > toIdx) {
+                alert("Số chương bắt đầu phải nhỏ hơn hoặc bằng số chương kết thúc!");
+                return;
+            }
+            try {
+                const res = await fetch(`/api/start_download/${currentBookId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        mode: 'range',
+                        start_idx: fromIdx,
+                        end_idx: toIdx
+                    })
+                });
+                const d = await res.json();
+                if (d.status === 'started' || d.status === 'running') {
+                    document.getElementById('dl-progress-box').style.display = 'block';
+                    pollDownloadProgress();
+                } else {
+                    alert(d.message);
+                }
+            } catch(e) {
+                alert('Lỗi khởi động tải khoảng: ' + e);
+            }
+        }
+
+        function setDlRange(from, to) {
+            document.getElementById('input-range-from').value = from;
+            document.getElementById('input-range-to').value = to;
+        }
+
+        function setDlRangeAll() {
+            document.getElementById('input-range-from').value = 1;
+            document.getElementById('input-range-to').value = currentChapters.length || 9999;
+        }
+
+        function pollDownloadProgress() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(async () => {
+                if (!currentBookId) {
+                    clearInterval(pollTimer);
+                    return;
+                }
+                try {
+                    const res = await fetch(`/api/download_status/${currentBookId}`);
+                    const st = await res.json();
+                    if (st.status === 'running') {
+                        document.getElementById('dl-progress-box').style.display = 'block';
+                        const pct = st.total > 0 ? Math.round((st.current / st.total) * 100) : 0;
+                        document.getElementById('dl-progress-fill').style.width = pct + '%';
+                        document.getElementById('dl-progress-text').innerText = `${st.current}/${st.total} (${pct}%) - ${st.current_title}`;
+                    } else if (st.status === 'finished') {
+                        clearInterval(pollTimer);
+                        document.getElementById('dl-progress-fill').style.width = '100%';
+                        document.getElementById('dl-progress-text').innerText = `✅ Tải hoàn tất: ${st.success} thành công!`;
+                        refreshChaptersList();
+                        setTimeout(() => {
+                            document.getElementById('dl-progress-box').style.display = 'none';
+                        }, 3000);
+                    } else if (st.status === 'canceled') {
+                        clearInterval(pollTimer);
+                        document.getElementById('dl-progress-text').innerText = 'Đã dừng tải.';
+                        refreshChaptersList();
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }, 1000);
+        }
+
+        async function checkDownloadStatus() {
+            if (!currentBookId) return;
+            try {
+                const res = await fetch(`/api/download_status/${currentBookId}`);
+                const st = await res.json();
+                if (st.status === 'running') {
+                    document.getElementById('dl-progress-box').style.display = 'block';
+                    pollDownloadProgress();
+                }
+            } catch(e) {}
+        }
+
+        async function cancelDl() {
+            if (!currentBookId) return;
+            await fetch(`/api/cancel_download/${currentBookId}`, {method: 'POST'});
+        }
+
+        async function syncToPhoneOffline() {
+            if (!currentBookId) return;
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerText = 'Đang đồng bộ vào bộ nhớ iPhone...';
+            try {
+                const res = await fetch(`/api/sync_offline/${currentBookId}`);
+                const d = await res.json();
+                if (d.chapters && d.chapters.length) {
+                    d.chapters.forEach(c => {
+                        localStorage.setItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`, c.content);
+                    });
+                    
+                    // Also store book metadata
+                    const bookTitle = document.getElementById('active-book-title').innerText.replace(' (Ngoại tuyến)', '');
+                    localStorage.setItem(`stv_cached_book_${currentBookId}`, JSON.stringify({
+                        book: {id: currentBookId, title: bookTitle},
+                        chapters: currentChapters
+                    }));
+
+                    alert(`Đã lưu ${d.chapters.length} chương vào bộ nhớ iPhone! Giờ Sếp có thể tắt máy tính hoàn toàn và đọc offline bình thường.`);
+                    refreshChaptersList();
+                } else {
+                    alert('Chưa có chương nào được tải trong DB server! Hãy bấm [Tải Chương Thiếu] hoặc [Tải Khoảng] trước.');
+                }
+            } catch(e) {
+                alert('Lỗi đồng bộ: ' + e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '📱 Lưu Hết Vào Bộ Nhớ iPhone (Đọc Không Cần Wi-Fi)';
+            }
+        }
+
+        // ==================== READER ENGINE ====================
+        async function readChapter(index) {
+            currentChapIndex = index;
+            const chap = currentChapters[index];
+            if (!chap) return;
+
+            document.getElementById('view-chapters').style.display = 'none';
+            document.getElementById('view-reader').style.display = 'flex';
+
+            document.getElementById('reader-chapter-title').innerText = chap.chapter_title;
+            document.getElementById('reader-header-title').innerText = chap.chapter_title;
+            const bodyEl = document.getElementById('reader-content');
+
+            // 1. Check local device cache (iPhone memory)
+            const localCached = localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${chap.chapter_id}`);
+            if (localCached) {
+                renderContent(localCached);
+            } else {
+                bodyEl.innerHTML = '<p style="color: #64748b; text-align: center;">Đang nạp từ server...</p>';
+                try {
+                    const res = await fetch(`/api/chapter/${currentBookId}/${chap.chapter_id}`);
+                    const data = await res.json();
+                    if (data.content) {
+                        renderContent(data.content);
+                        localStorage.setItem(`${CACHE_PREFIX}${currentBookId}_${chap.chapter_id}`, data.content);
+                    } else {
+                        bodyEl.innerHTML = '<p style="color: #dc2626; text-align: center;">Chưa có nội dung chương này!</p>';
+                    }
+                } catch(e) {
+                    bodyEl.innerHTML = '<p style="color: #dc2626; text-align: center;">Không có mạng và chương chưa lưu trong máy iPhone!</p>';
+                }
+            }
+
+            document.getElementById('btn-prev-chap').disabled = (index <= 0);
+            document.getElementById('btn-next-chap').disabled = (index >= currentChapters.length - 1);
+            document.getElementById('btn-content-prev').disabled = (index <= 0);
+            document.getElementById('btn-content-next').disabled = (index >= currentChapters.length - 1);
+            document.getElementById('reader-scroll-area').scrollTop = 0;
+        }
+
+        function renderContent(rawText) {
+            const paras = rawText.split('\n\n').map(p => {
+                const clean = p.trim();
+                return clean ? `<p style="margin-bottom:1.3em; text-indent:1.6em;">${clean.replace(/\n/g, '<br>')}</p>` : '';
+            }).join('');
+            document.getElementById('reader-content').innerHTML = paras;
+        }
+
+        function prevChapter() {
+            if (currentChapIndex > 0) readChapter(currentChapIndex - 1);
+        }
+
+        function nextChapter() {
+            if (currentChapIndex < currentChapters.length - 1) readChapter(currentChapIndex + 1);
+        }
+
+        function goLibrary() {
+            if (pollTimer) clearInterval(pollTimer);
+            if (isAutoScrolling) toggleAutoScroll();
+            switchTab('lib');
+        }
+
+        function goChapters() {
+            if (isAutoScrolling) toggleAutoScroll();
+            document.getElementById('view-reader').style.display = 'none';
+            document.getElementById('view-chapters').style.display = 'block';
+            refreshChaptersList();
+        }
+
+        function downloadEpub() {
+            if (!currentBookId) return;
+            window.location.href = `/api/export_epub/${currentBookId}`;
+        }
+
+        function downloadTxt() {
+            if (!currentBookId) return;
+            window.location.href = `/api/export_txt/${currentBookId}`;
+        }
+
+        // Reader Themes & Customization
+        function toggleSettings() {
+            const s = document.getElementById('reader-settings-sheet');
+            s.style.display = (s.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function toggleDrawer() {
+            const d = document.getElementById('reader-drawer-sheet');
+            if (d.style.display === 'flex') {
+                d.style.display = 'none';
+            } else {
+                d.style.display = 'flex';
+                renderDrawerList();
+            }
+        }
+
+        function renderDrawerList() {
+            const el = document.getElementById('reader-drawer-list');
+            el.innerHTML = currentChapters.map((c, idx) => `
+                <div style="padding: 10px 8px; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-weight: ${idx === currentChapIndex ? '800' : '500'}; color: ${idx === currentChapIndex ? 'var(--primary)' : '#1e293b'}; cursor: pointer;" onclick="toggleDrawer(); readChapter(${idx});">
+                    ${c.chapter_title}
+                </div>
+            `).join('');
+        }
+
+        function setReaderTheme(theme) {
+            const r = document.getElementById('view-reader');
+            const topBar = document.getElementById('reader-top-bar');
+            const botBar = document.getElementById('reader-bottom-bar');
+
+            if (theme === 'sepia') {
+                r.style.background = '#fbf0d9';
+                r.style.color = '#2d241e';
+                topBar.style.background = 'rgba(251,240,217,0.96)';
+                botBar.style.background = 'rgba(251,240,217,0.96)';
+            } else if (theme === 'white') {
+                r.style.background = '#ffffff';
+                r.style.color = '#0f172a';
+                topBar.style.background = 'rgba(255,255,255,0.96)';
+                botBar.style.background = 'rgba(255,255,255,0.96)';
+            } else if (theme === 'dark') {
+                r.style.background = '#1e293b';
+                r.style.color = '#f1f5f9';
+                topBar.style.background = 'rgba(30,41,59,0.96)';
+                botBar.style.background = 'rgba(30,41,59,0.96)';
+            } else if (theme === 'oled') {
+                r.style.background = '#000000';
+                r.style.color = '#cbd5e1';
+                topBar.style.background = 'rgba(0,0,0,0.96)';
+                botBar.style.background = 'rgba(0,0,0,0.96)';
+            }
+        }
+
+        function adjustFontSize(delta) {
+            readerFontSize = Math.max(14, Math.min(32, readerFontSize + delta));
+            document.getElementById('reader-scroll-area').style.fontSize = readerFontSize + 'px';
+            document.getElementById('font-size-label').innerText = readerFontSize + 'px';
+        }
+
+        function setLineSpacing(val) {
+            readerLineHeight = val;
+            document.getElementById('reader-scroll-area').style.lineHeight = val;
+        }
+
+        function toggleAutoScroll() {
+            const btn = document.getElementById('btn-auto-scroll');
+            if (isAutoScrolling) {
+                clearInterval(autoScrollInterval);
+                isAutoScrolling = false;
+                btn.innerText = '▶ Tự Cuộn';
+                btn.style.background = '#10b981';
+            } else {
+                isAutoScrolling = true;
+                btn.innerText = '⏸ Dừng';
+                btn.style.background = '#f59e0b';
+                const scrollArea = document.getElementById('reader-scroll-area');
+                autoScrollInterval = setInterval(() => {
+                    scrollArea.scrollTop += 1;
+                    if (scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 5) {
+                        toggleAutoScroll();
+                    }
+                }, 40);
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+
+        // Initialize library
+        loadLibrary();
+    </script>
+</body>
+</html>
