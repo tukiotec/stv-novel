@@ -343,6 +343,118 @@
             gap: 6px;
             flex-wrap: wrap;
         }
+        .result-card {
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .result-card:hover {
+            border-color: #93c5fd;
+            background: #f8fafc;
+        }
+        .result-card:active {
+            transform: scale(0.99);
+        }
+
+        /* Modal Preview & Comments */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 99999;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-sheet {
+            background: #ffffff;
+            width: 100%;
+            max-width: 680px;
+            max-height: 88vh;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.25);
+            overflow: hidden;
+            animation: sheetSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes sheetSlideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .modal-body {
+            padding: 16px 18px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
+        }
+        .preview-tab-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preview-tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        .comment-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .comment-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid #e2e8f0;
+            background: #f1f5f9;
+        }
+        .comment-bubble {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+
+
 
         /* Download Panel Box */
         .download-panel {
@@ -617,6 +729,84 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL: THÔNG TIN TRUYỆN & BÌNH LUẬN ==================== -->
+    <div id="modal-book-preview" class="modal-overlay" onclick="closeBookPreviewModal(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <!-- HEADER -->
+            <div class="modal-header">
+                <div style="font-size: 15px; font-weight: 800; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                    <span>📖 Thông Tin Chi Tiết Truyện</span>
+                </div>
+                <button style="background: none; border: none; font-size: 20px; font-weight: 700; color: #64748b; cursor: pointer; padding: 4px 8px;" onclick="closeBookPreviewModal()">✕</button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body">
+                <!-- TOP INFO: COVER + META -->
+                <div style="display: flex; gap: 14px; margin-bottom: 14px;">
+                    <img id="preview-cover" src="/icon.png" style="width: 95px; height: 130px; border-radius: 10px; object-fit: cover; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); flex-shrink: 0;" onerror="this.src='/icon.png';">
+                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div id="preview-title" style="font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 4px;">Đang tải tiêu đề...</div>
+                            <div id="preview-author" style="font-size: 13px; color: #475569; margin-bottom: 6px;">Tác giả: ...</div>
+                            <div id="preview-badges" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;">
+                                <span id="preview-badge-host" class="badge blue">STV</span>
+                                <span id="preview-badge-chaps" class="badge green">📖 ...</span>
+                                <span id="preview-badge-views" class="badge" style="background: #f1f5f9; color: #1e293b;">👁️ ...</span>
+                                <span id="preview-badge-likes" class="badge" style="background: #fef3c7; color: #92400e;">👍 ...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 BIG ACTION BUTTONS: ĐỌC NGAY (OPTION ĐỌC LUÔN), TẢI VỀ MÁY, THÊM TỦ -->
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                    <button id="preview-btn-read" class="btn btn-green" style="padding: 12px 6px; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        📖 Đọc Ngay
+                    </button>
+                    <button id="preview-btn-download" class="btn" style="background: #0284c7; padding: 12px 6px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        ⬇ Tải Về
+                    </button>
+                    <button id="preview-btn-add" class="btn btn-outline" style="padding: 12px 6px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        ➕ Thêm Tủ
+                    </button>
+                </div>
+
+                <!-- TABS: GIỚI THIỆU & BÌNH LUẬN -->
+                <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 14px;">
+                    <div id="tab-btn-intro" class="preview-tab-btn active" onclick="switchPreviewTab('intro')">
+                        📝 Giới Thiệu
+                    </div>
+                    <div id="tab-btn-comments" class="preview-tab-btn" onclick="switchPreviewTab('comments')">
+                        💬 Bình Luận (<span id="preview-comments-badge">0</span>)
+                    </div>
+                </div>
+
+                <!-- TAB CONTENT: GIỚI THIỆU -->
+                <div id="tab-content-intro" style="font-size: 14px; line-height: 1.7; color: #334155; white-space: pre-line; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                    <div style="text-align: center; padding: 24px;">
+                        <div class="spinner"></div>
+                        <div style="margin-top: 8px; color: #64748b; font-size: 13px;">Đang tải tóm tắt truyện...</div>
+                    </div>
+                </div>
+
+                <!-- TAB CONTENT: BÌNH LUẬN -->
+                <div id="tab-content-comments" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 12px; font-weight: 700; color: #64748b;">Độc giả Sáng Tác Việt thảo luận:</span>
+                        <button class="badge" style="cursor: pointer; background: #e0f2fe; color: #0369a1; border: none; padding: 4px 8px;" onclick="reloadPreviewComments()">🔄 Làm mới</button>
+                    </div>
+                    <div id="preview-comments-list">
+                        <div style="text-align: center; padding: 24px;">
+                            <div class="spinner"></div>
+                            <div style="margin-top: 8px; color: #64748b; font-size: 13px;">Đang tải bình luận bạn đọc...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== VIEW: CHI TIẾT & TRUNG TÂM TẢI ==================== -->
     <div id="view-chapters" class="container" style="display: none;">
         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px;">
@@ -879,31 +1069,217 @@
             const safeCover = b.cover_url || '/icon.png';
             const titleSafe = (b.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const authorSafe = (b.author || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const chapsSafe = (b.chapters || '').toString();
+            const viewsSafe = (b.views || '').toString();
+            const likesSafe = (b.likes || '').toString();
             
             return `
-                <div class="result-card">
+                <div class="result-card" onclick="openBookPreviewModal('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}', '${chapsSafe}', '${viewsSafe}', '${likesSafe}')">
                     <img class="result-cover" src="${safeCover}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/icon.png';" alt="Cover">
                     <div class="result-info">
                         <div>
                             <div class="result-title">${b.title}</div>
                             <div class="result-author">Tác giả: ${b.author || 'Chưa rõ'}</div>
-                            <div class="result-badges" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px;">
+                            <div class="result-badges" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;">
                                 <span class="badge blue">${hostLabel}</span>
                                 ${b.chapters ? `<span class="badge green" style="font-weight: 700;">📖 ${b.chapters} ch</span>` : ''}
                                 ${b.views ? `<span class="badge" style="background: #f1f5f9; color: #1e293b; font-weight: 700;">👁️ ${b.views}</span>` : ''}
                                 ${b.likes ? `<span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">👍 ${b.likes}</span>` : ''}
                                 ${b.status ? `<span class="badge orange">${b.status}</span>` : ''}
                             </div>
+                            <div style="font-size: 11px; color: #2563eb; font-weight: 600; margin-bottom: 6px;">
+                                👆 Chạm xem tóm tắt & bình luận
+                            </div>
                         </div>
-                        <div class="result-actions">
-                            <button class="btn btn-sm btn-outline" id="btn-add-${idx}" onclick="addBookFromSearch(this, '${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">➕ Thêm Tủ</button>
-                            <button class="btn btn-sm" style="background:#0284c7;" onclick="actionDownloadFromSearch('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">⬇ Tải Ngay</button>
-                            <button class="btn btn-sm btn-green" onclick="actionReadFromSearch('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">📖 Đọc</button>
+                        <div class="result-actions" onclick="event.stopPropagation()">
+                            <button class="btn btn-sm btn-outline" id="btn-add-${idx}" onclick="event.stopPropagation(); addBookFromSearch(this, '${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">➕ Thêm Tủ</button>
+                            <button class="btn btn-sm" style="background:#0284c7;" onclick="event.stopPropagation(); actionDownloadFromSearch('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">⬇ Tải Ngay</button>
+                            <button class="btn btn-sm btn-green" onclick="event.stopPropagation(); actionReadFromSearch('${b.host}', '${b.book_id}', '${titleSafe}', '${authorSafe}', '${safeCover}')">📖 Đọc</button>
                         </div>
                     </div>
                 </div>
             `;
         }
+
+        // ==================== BOOK PREVIEW MODAL LOGIC ====================
+        let currentPreviewHost = null;
+        let currentPreviewBookId = null;
+        let currentPreviewTitle = null;
+        let currentPreviewAuthor = null;
+        let currentPreviewCover = null;
+
+        async function openBookPreviewModal(host, bookId, title, author, coverUrl, chapters = '', views = '', likes = '') {
+            currentPreviewHost = host;
+            currentPreviewBookId = bookId;
+            currentPreviewTitle = title;
+            currentPreviewAuthor = author;
+            currentPreviewCover = coverUrl || '/icon.png';
+
+            const modal = document.getElementById('modal-book-preview');
+            modal.classList.add('active');
+
+            // Render basic info immediately
+            document.getElementById('preview-cover').src = currentPreviewCover;
+            document.getElementById('preview-title').innerText = title;
+            document.getElementById('preview-author').innerText = author ? `Tác giả: ${author}` : 'Tác giả: Chưa rõ';
+            
+            document.getElementById('preview-badge-host').innerText = (host || 'STV').toUpperCase();
+            document.getElementById('preview-badge-chaps').innerText = chapters ? `📖 ${chapters} ch` : '📖 ...';
+            document.getElementById('preview-badge-views').innerText = views ? `👁️ ${views}` : '👁️ Top';
+            document.getElementById('preview-badge-likes').innerText = likes ? `👍 ${likes}` : '👍 --';
+
+            // Wire 3 big buttons
+            const btnRead = document.getElementById('preview-btn-read');
+            const btnDownload = document.getElementById('preview-btn-download');
+            const btnAdd = document.getElementById('preview-btn-add');
+
+            btnRead.onclick = () => {
+                closeBookPreviewModal();
+                actionReadFromSearch(host, bookId, title, author, currentPreviewCover);
+            };
+
+            btnDownload.onclick = () => {
+                closeBookPreviewModal();
+                actionDownloadFromSearch(host, bookId, title, author, currentPreviewCover);
+            };
+
+            btnAdd.onclick = () => {
+                addBookFromSearch(btnAdd, host, bookId, title, author, currentPreviewCover);
+            };
+
+            // Reset tab
+            switchPreviewTab('intro');
+
+            // Set loading skeletons
+            document.getElementById('tab-content-intro').innerHTML = `
+                <div style="text-align: center; padding: 24px;">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 8px; color: #64748b; font-size: 13px;">Đang tải tóm tắt truyện từ Sáng Tác Việt...</div>
+                </div>
+            `;
+            document.getElementById('preview-comments-list').innerHTML = `
+                <div style="text-align: center; padding: 24px;">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 8px; color: #64748b; font-size: 13px;">Đang tải bình luận bạn đọc...</div>
+                </div>
+            `;
+            document.getElementById('preview-comments-badge').innerText = '...';
+
+            // Fetch details and comments from server
+            try {
+                const res = await fetch(`/api/book_preview/${host}/${bookId}`);
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    if (data.intro) {
+                        document.getElementById('tab-content-intro').innerText = data.intro;
+                    } else {
+                        document.getElementById('tab-content-intro').innerText = 'Chưa có tóm tắt giới thiệu cho bộ truyện này.';
+                    }
+
+                    if (data.cover_url && data.cover_url !== '/icon.png') {
+                        document.getElementById('preview-cover').src = data.cover_url;
+                        currentPreviewCover = data.cover_url;
+                    }
+
+                    if (data.in_library_id) {
+                        btnAdd.innerText = '✅ Đã Trong Tủ';
+                        btnAdd.classList.remove('btn-outline');
+                        btnAdd.classList.add('btn-green');
+                    } else {
+                        btnAdd.innerText = '➕ Thêm Tủ';
+                        btnAdd.classList.remove('btn-green');
+                        btnAdd.classList.add('btn-outline');
+                    }
+
+                    renderComments(data.comments || []);
+                } else {
+                    document.getElementById('tab-content-intro').innerText = 'Không lấy được tóm tắt truyện.';
+                    document.getElementById('preview-comments-list').innerHTML = '<div style="color: #64748b; text-align: center; padding: 14px;">Không có bình luận.</div>';
+                }
+            } catch (err) {
+                document.getElementById('tab-content-intro').innerText = 'Lỗi kết nối khi tải chi tiết truyện: ' + err;
+                document.getElementById('preview-comments-list').innerHTML = '<div style="color: #dc2626; text-align: center; padding: 14px;">Lỗi tải bình luận: ' + err + '</div>';
+            }
+        }
+
+        function closeBookPreviewModal(e) {
+            if (e && e.target && e.target.id !== 'modal-book-preview' && !e.target.closest('button')) {
+                return;
+            }
+            const modal = document.getElementById('modal-book-preview');
+            modal.classList.remove('active');
+        }
+
+        function switchPreviewTab(tab) {
+            const btnIntro = document.getElementById('tab-btn-intro');
+            const btnComments = document.getElementById('tab-btn-comments');
+            const contentIntro = document.getElementById('tab-content-intro');
+            const contentComments = document.getElementById('tab-content-comments');
+
+            if (tab === 'intro') {
+                btnIntro.classList.add('active');
+                btnComments.classList.remove('active');
+                contentIntro.style.display = 'block';
+                contentComments.style.display = 'none';
+            } else {
+                btnComments.classList.add('active');
+                btnIntro.classList.remove('active');
+                contentIntro.style.display = 'none';
+                contentComments.style.display = 'block';
+            }
+        }
+
+        function renderComments(comments) {
+            const countEl = document.getElementById('preview-comments-badge');
+            countEl.innerText = comments.length;
+            const listEl = document.getElementById('preview-comments-list');
+
+            if (!comments.length) {
+                listEl.innerHTML = `
+                    <div style="text-align: center; color: #64748b; font-size: 13px; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                        💬 Chưa có bình luận nào cho bộ truyện này trên Sáng Tác Việt.
+                    </div>
+                `;
+                return;
+            }
+
+            const html = comments.map(c => `
+                <div class="comment-item">
+                    <img class="comment-avatar" src="${c.avatar || '/icon.png'}" onerror="this.onerror=null;this.src='/icon.png';" alt="Avatar">
+                    <div class="comment-bubble">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-weight: 700; color: #1e3a8a; font-size: 13px;">${c.user}</span>
+                            <span style="font-size: 11px; color: #94a3b8;">${c.time || ''}</span>
+                        </div>
+                        <div style="font-size: 13px; line-height: 1.5; color: #1e293b; word-break: break-word;">
+                            ${c.content}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            listEl.innerHTML = html;
+        }
+
+        async function reloadPreviewComments() {
+            if (!currentPreviewHost || !currentPreviewBookId) return;
+            const listEl = document.getElementById('preview-comments-list');
+            listEl.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 8px; color: #64748b; font-size: 13px;">Đang làm mới bình luận...</div>
+                </div>
+            `;
+            try {
+                const res = await fetch(`/api/book_preview/${currentPreviewHost}/${currentPreviewBookId}`);
+                const data = await res.json();
+                renderComments(data.comments || []);
+            } catch(e) {
+                listEl.innerHTML = '<div style="color:#dc2626; text-align:center; padding:12px;">Lỗi nạp bình luận: ' + e + '</div>';
+            }
+        }
+
 
         // Search Executor
         async function doSearch() {
@@ -1467,18 +1843,58 @@
             if (localCached) {
                 renderContent(localCached);
             } else {
-                bodyEl.innerHTML = '<p style="color: #64748b; text-align: center;">Đang nạp từ server...</p>';
+                bodyEl.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px;">
+                        <div class="spinner" style="width: 42px; height: 42px; border-width: 4px; border-top-color: #2563eb; margin: 0 auto 16px auto;"></div>
+                        <div style="font-weight: 800; color: #1e3a8a; font-size: 16px;">Đang Tải Chương Trực Tiếp Từ Sáng Tác Việt...</div>
+                        <div style="color: #64748b; font-size: 13px; margin-top: 8px; line-height: 1.5;">Hệ thống đang kết nối ngầm, vượt xác nhận và lưu nội dung vào máy</div>
+                    </div>
+                `;
                 try {
                     const res = await fetch(`/api/chapter/${currentBookId}/${chap.chapter_id}`);
                     const data = await res.json();
-                    if (data.content) {
+                    if (data.content && data.content.trim().length > 0) {
                         renderContent(data.content);
                         localStorage.setItem(`${CACHE_PREFIX}${currentBookId}_${chap.chapter_id}`, data.content);
+                        chap.content = data.content;
+                        chap.is_downloaded = 1;
+                        // Update cache for the book chapter list
+                        try {
+                            const cachedBookStr = localStorage.getItem(`stv_cached_book_${currentBookId}`);
+                            if (cachedBookStr) {
+                                const cb = JSON.parse(cachedBookStr);
+                                if (cb.chapters && cb.chapters[index]) {
+                                    cb.chapters[index].is_downloaded = 1;
+                                    localStorage.setItem(`stv_cached_book_${currentBookId}`, JSON.stringify(cb));
+                                }
+                            }
+                        } catch(e) {}
                     } else {
-                        bodyEl.innerHTML = '<p style="color: #dc2626; text-align: center;">Chưa có nội dung chương này!</p>';
+                        bodyEl.innerHTML = `
+                            <div style="text-align: center; padding: 40px 16px; background: #ffffff; border: 1.5px solid #fecaca; border-radius: 14px; margin: 30px auto; max-width: 480px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                                <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
+                                <div style="font-weight: 800; color: #b91c1c; font-size: 16px; margin-bottom: 6px;">Chưa Lấy Được Nội Dung Chương Này</div>
+                                <div style="font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 18px;">
+                                    Nguồn gốc Sáng Tác Việt có thể đang phản hồi chậm hoặc chương chưa có nội dung.
+                                </div>
+                                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                                    <button class="btn btn-sm btn-green" onclick="readChapter(${index})" style="padding: 10px 16px; font-weight: 700;">🔄 Thử Tải Lại Ngay</button>
+                                    <button class="btn btn-sm" onclick="nextChapter()" style="padding: 10px 16px; background: #0284c7; font-weight: 700;">Sang Chương Sau ⏭</button>
+                                </div>
+                            </div>
+                        `;
                     }
                 } catch(e) {
-                    bodyEl.innerHTML = '<p style="color: #dc2626; text-align: center;">Không có mạng và chương chưa lưu trong máy iPhone!</p>';
+                    bodyEl.innerHTML = `
+                        <div style="text-align: center; padding: 40px 16px; background: #ffffff; border: 1.5px solid #fecaca; border-radius: 14px; margin: 30px auto; max-width: 480px;">
+                            <div style="font-size: 32px; margin-bottom: 10px;">📡</div>
+                            <div style="font-weight: 800; color: #b91c1c; font-size: 16px; margin-bottom: 6px;">Không Có Kết Nối Mạng</div>
+                            <div style="font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 18px;">
+                                Chương này chưa được lưu ngoại tuyến vào iPhone và không thể kết nối tới server.
+                            </div>
+                            <button class="btn btn-sm btn-outline" onclick="readChapter(${index})" style="padding: 10px 16px;">🔄 Thử Kết Nối Lại</button>
+                        </div>
+                    `;
                 }
             }
 

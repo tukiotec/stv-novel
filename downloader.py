@@ -104,12 +104,22 @@ class ChapterDownloaderWorker(QThread):
     async def _fetch_single_chapter(self, browser, host: str, book_id: str, chapter_id: str, timeout: int = 12) -> Optional[str]:
         return await fetch_single_chapter_content(browser, host, book_id, chapter_id, self.base_url, timeout)
 
-async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "http://14.225.254.182", timeout: int = 12) -> Optional[str]:
+async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "http://14.225.254.182", timeout: int = 15) -> Optional[str]:
     ctx = None
     try:
         ctx = await browser.new_context(
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         )
+        # Pre-seed essential STV cookies
+        try:
+            await ctx.add_cookies([
+                {'name': 'lang', 'value': 'vi', 'domain': '14.225.254.182', 'path': '/'},
+                {'name': 'hideavatar', 'value': 'false', 'domain': '14.225.254.182', 'path': '/'},
+                {'name': 'cookieenabled', 'value': 'true', 'domain': '14.225.254.182', 'path': '/'}
+            ])
+        except Exception:
+            pass
+
         await ctx.add_init_script('Object.defineProperty(navigator, "webdriver", { get: () => undefined });')
         page = await ctx.new_page()
 
@@ -118,10 +128,10 @@ async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter
 
         async def on_resp(res):
             nonlocal chapter_data
-            if 'sajax' in res.url or 'readc' in res.url:
+            if 'sajax' in res.url or 'readc' in res.url or 'readchapter' in res.url:
                 try:
                     text = await res.text()
-                    if '"code":"0"' in text:
+                    if '"code":"0"' in text or '"code":0' in text:
                         chapter_data = json.loads(text)
                         ev.set()
                 except Exception:
@@ -131,23 +141,54 @@ async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter
         url = f"{base_url}/truyen/{host}/1/{book_id}/{chapter_id}/"
 
         try:
-            await page.goto(url, wait_until='domcontentloaded', timeout=10000)
+            await page.goto(url, wait_until='domcontentloaded', timeout=12000)
         except Exception:
             pass
 
-        # Simulate natural human mouse movement to trigger stv.readinit.js
+        # 1. Dismiss language modal if it appears
+        try:
+            vi_btn = await page.wait_for_selector('text=Tiếng Việt', timeout=2000)
+            if vi_btn:
+                await vi_btn.click()
+        except Exception:
+            pass
+
+        # 2. Simulate micro natural mouse movements
         for x, y in [(60, 60), (140, 140), (240, 240)]:
             await page.mouse.move(x, y)
-            await asyncio.sleep(0.08)
+            await asyncio.sleep(0.05)
 
+        # 3. Trigger "Nhấp vào để tải chương" button if STV requires manual click
+        try:
+            load_btn = await page.wait_for_selector('text=Nhấp vào để tải chương', timeout=2000)
+            if load_btn:
+                await load_btn.click()
+        except Exception:
+            pass
+
+        # 4. Wait for AJAX response
         try:
             await asyncio.wait_for(ev.wait(), timeout=timeout)
         except asyncio.TimeoutError:
             pass
 
+        # 5. Extract content from AJAX or fallback to DOM
         if chapter_data and 'data' in chapter_data:
             cleaned = clean_chapter_content(chapter_data['data'])
-            return cleaned
+            if cleaned and len(cleaned) > 50:
+                return cleaned
+
+        # Fallback: check DOM #content-container
+        try:
+            c_el = await page.query_selector('#content-container')
+            if c_el:
+                dom_text = await c_el.inner_text()
+                if dom_text and len(dom_text.strip()) > 100:
+                    cleaned_dom = clean_chapter_content(dom_text)
+                    return cleaned_dom
+        except Exception:
+            pass
+
         return None
 
     except Exception as e:
@@ -159,4 +200,5 @@ async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter
                 await ctx.close()
             except Exception:
                 pass
+
 

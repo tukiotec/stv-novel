@@ -18,7 +18,7 @@ if sys.stdout is not None:
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from stv_novel_app.db import STVDatabase
-from stv_novel_app.api import parse_story_input, fetch_book_metadata, fetch_chapter_list, search_stv
+from stv_novel_app.api import parse_story_input, fetch_book_metadata, fetch_chapter_list, search_stv, fetch_book_details_and_comments
 from stv_novel_app.downloader import fetch_single_chapter_content
 from stv_novel_app.epub_builder import create_epub
 
@@ -177,6 +177,23 @@ def get_book_details(book_fk: int):
         "book": book,
         "chapters": chapters
     })
+
+@app.get("/api/book_preview/{host}/{book_id}")
+def get_book_preview(host: str, book_id: str):
+    try:
+        preview = fetch_book_details_and_comments(host, book_id)
+        # Check if already in user's library
+        existing_books = db.get_books()
+        in_library_id = None
+        for b in existing_books:
+            if b['host'].lower() == host.lower() and str(b['book_id']) == str(book_id):
+                in_library_id = b['id']
+                break
+        preview['in_library_id'] = in_library_id
+        return JSONResponse(preview)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi tải thông tin truyện: {str(e)}")
+
 
 @app.post("/api/delete_book/{book_fk}")
 @app.delete("/api/book/{book_fk}")

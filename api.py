@@ -244,3 +244,101 @@ def clean_chapter_content(raw_html: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
+
+def fetch_book_details_and_comments(host: str, book_id: str, base_url: str = DEFAULT_BASE) -> Dict:
+    """
+    Fetches full book details (title, author, cover, intro, stats)
+    and real-time reader comments from Sáng Tác Việt.
+    """
+    url = f"{base_url}/truyen/{host}/1/{book_id}/"
+    headers = dict(HEADERS)
+    
+    title = f"{host.upper()} #{book_id}"
+    author = ""
+    cover_url = ""
+    intro = ""
+    views = ""
+    likes = ""
+    in_library = ""
+    following = ""
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        html = resp.content.decode('utf-8', errors='ignore')
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # 1. Title
+        h1 = soup.find('h1')
+        if h1:
+            title = h1.text.strip()
+        if not title:
+            meta_t = soup.find('meta', property='og:title')
+            title = meta_t['content'].strip() if meta_t else title
+        title = re.sub(r'\s*-\s*[0-9]+\s*chương.*$', '', title, flags=re.IGNORECASE).strip()
+
+        # 2. Author
+        meta_a = soup.find('meta', property='og:novel:author')
+        if meta_a:
+            author = meta_a.get('content', '').strip()
+
+        # 3. Cover
+        meta_c = soup.find('meta', property='og:image')
+        if meta_c:
+            cover_url = meta_c.get('content', '').strip()
+
+        # 4. Intro
+        sum_el = soup.find(id='book-sumary') or soup.find(class_='blk-body')
+        if sum_el:
+            intro = sum_el.text.strip()
+        if not intro:
+            og_d = soup.find('meta', property='og:description')
+            intro = og_d.get('content', '').strip() if og_d else ''
+        intro = re.sub(r'\n{3,}', '\n\n', intro)
+
+    except Exception as e:
+        print(f"Error fetching book details: {e}")
+
+    # 5. Comments from STV API
+    comments = []
+    try:
+        cmt_url = f"{base_url}/io/comment/webComments"
+        c_hdrs = dict(HEADERS)
+        c_hdrs['Referer'] = url
+        c_hdrs['Content-Type'] = 'application/x-www-form-urlencoded'
+        c_data = {
+            'start': '0',
+            'objectid': str(book_id),
+            'objecttype': str(host)
+        }
+        cr = requests.post(cmt_url, headers=c_hdrs, data=c_data, timeout=8)
+        c_soup = BeautifulSoup(cr.text, 'html.parser')
+        for sec in c_soup.find_all('div', class_='flex'):
+            top = sec.find(class_='sec-top')
+            c_text = top.text.strip() if top else ''
+            user_a = sec.find('a')
+            user_name = user_a.text.strip() if user_a else 'Bạn đọc'
+            av_img = sec.find('img', class_='comment-avatar')
+            av_url = av_img.get('src', '') if av_img else ''
+            t_span = sec.find(class_='timeelap')
+            time_val = t_span.text.strip() if t_span else ''
+
+            if c_text:
+                comments.append({
+                    'user': user_name,
+                    'avatar': av_url,
+                    'content': c_text,
+                    'time': time_val
+                })
+    except Exception as e:
+        print(f"Error fetching comments: {e}")
+
+    return {
+        'status': 'success',
+        'host': host,
+        'book_id': book_id,
+        'title': title,
+        'author': author,
+        'cover_url': cover_url,
+        'intro': intro or 'Chưa có tóm tắt giới thiệu cho bộ truyện này.',
+        'comments': comments
+    }
