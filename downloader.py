@@ -129,7 +129,7 @@ class ChapterDownloaderWorker(QThread):
     async def _fetch_single_chapter(self, browser, host: str, book_id: str, chapter_id: str, timeout: int = 12) -> Optional[str]:
         return await fetch_single_chapter_content(browser, host, book_id, chapter_id, self.base_url, timeout)
 
-async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "http://14.225.254.182", timeout: int = 12) -> Optional[str]:
+async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "https://sangtacviet.vip", timeout: int = 12) -> Optional[str]:
     ctx = None
     try:
         ctx = await browser.new_context(
@@ -138,20 +138,22 @@ async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter
         # Pre-seed essential STV cookies
         try:
             await ctx.add_cookies([
-                {'name': 'lang', 'value': 'vi', 'domain': '14.225.254.182', 'path': '/'},
-                {'name': 'hideavatar', 'value': 'false', 'domain': '14.225.254.182', 'path': '/'},
-                {'name': 'cookieenabled', 'value': 'true', 'domain': '14.225.254.182', 'path': '/'}
+                {'name': 'lang', 'value': 'vi', 'domain': '.sangtacviet.vip', 'path': '/'},
+                {'name': 'lang', 'value': 'vi', 'domain': 'sangtacviet.vip', 'path': '/'},
+                {'name': 'cookieenabled', 'value': 'true', 'domain': '.sangtacviet.vip', 'path': '/'},
+                {'name': 'cookieenabled', 'value': 'true', 'domain': 'sangtacviet.vip', 'path': '/'},
+                {'name': 'hideavatar', 'value': 'false', 'domain': 'sangtacviet.vip', 'path': '/'}
             ])
         except Exception:
             pass
 
         page = await ctx.new_page()
 
-        # Block media, fonts, images and analytics to boost download speed 5-10x and save memory
+        # Block media and fonts to boost download speed, but keep scripts and GA for token generation
         async def block_junk(route):
             rtype = route.request.resource_type
             u = route.request.url
-            if rtype in ['image', 'media', 'font'] or 'google' in u or 'facebook' in u or 'tts' in u:
+            if rtype in ['image', 'media', 'font'] and 'captcha' not in u:
                 await route.abort()
             else:
                 await route.continue_()

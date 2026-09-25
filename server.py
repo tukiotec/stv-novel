@@ -60,6 +60,12 @@ class DownloadReq(BaseModel):
     start_idx: Optional[int] = 1
     end_idx: Optional[int] = 50
 
+class SaveChapterReq(BaseModel):
+    book_fk: int
+    chapter_id: str
+    chapter_title: Optional[str] = ""
+    content: str
+
 @app.get("/manifest.json")
 def get_manifest():
     return JSONResponse({
@@ -273,40 +279,25 @@ def get_browser_launch_kwargs():
         kwargs['executable_path'] = ares_chrome
     return kwargs
 
+@app.post("/api/save_chapter_content")
+def api_save_chapter_content(req: SaveChapterReq):
+    if not req.book_fk or not req.chapter_id or not req.content:
+        raise HTTPException(status_code=400, detail="Thiếu dữ liệu bắt buộc")
+    db.save_chapter_content(req.book_fk, req.chapter_id, req.content, req.chapter_title or "")
+    return JSONResponse({"status": "success", "message": "Đã lưu nội dung chương thành công"})
+
 @app.get("/api/chapter/{book_fk}/{chapter_id}")
 async def get_chapter(book_fk: int, chapter_id: str):
     chap = db.get_chapter_by_id(book_fk, chapter_id)
     if not chap:
         raise HTTPException(status_code=404, detail="Chapter not found")
     
-    # If not downloaded yet, auto-fetch on the fly in real-time!
-    if not chap.get('content') or not chap.get('is_downloaded'):
-        book = db.get_book_by_id(book_fk)
-        if book:
-            from playwright.async_api import async_playwright
-            pw = None
-            browser = None
-            try:
-                pw = await async_playwright().start()
-                browser = await pw.chromium.launch(**get_browser_launch_kwargs())
-                content = await fetch_single_chapter_content(browser, book['host'], book['book_id'], chapter_id)
-                if content:
-                    db.save_chapter_content(book_fk, chapter_id, content, chap['chapter_title'])
-                    chap['content'] = content
-                    chap['is_downloaded'] = 1
-            except Exception as e:
-                print(f"Auto-fetch chapter error: {e}")
-            finally:
-                if browser:
-                    try:
-                        await browser.close()
-                    except Exception:
-                        pass
-                if pw:
-                    try:
-                        await pw.stop()
-                    except Exception:
-                        pass
+    # Enrich with book host and book_id for instant client live viewing
+    book = db.get_book_by_id(book_fk)
+    if book:
+        chap['host'] = book['host']
+        chap['book_id'] = book['book_id']
+        chap['stv_url'] = f"https://sangtacviet.vip/truyen/{book['host']}/1/{book['book_id']}/{chapter_id}/"
 
     return JSONResponse(chap)
 

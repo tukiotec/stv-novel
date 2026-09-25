@@ -857,11 +857,13 @@
                     <button class="badge" onclick="setDlRange(1, 100)">1 - 100</button>
                     <button class="badge" onclick="setDlRangeAll()">Toàn Bộ</button>
                 </div>
-            </div>
+            <button class="btn" style="width: 100%; background: #059669; color: #ffffff; font-weight: 800; padding: 12px; margin-bottom: 8px; border-radius: 10px; font-size: 13.5px; box-shadow: 0 3px 8px rgba(5,150,105,0.25);" onclick="triggerClientBatchDownload()">
+                ⚡ Tải Bằng Mạng iPhone (Khuyên Dùng - Tốc Độ Cao & Không Lỗi)
+            </button>
 
             <div class="action-grid">
-                <button class="btn btn-green btn-sm" id="btn-dl-missing" onclick="triggerDownload('missing')">⬇ Tải Chương Thiếu</button>
-                <button class="btn btn-sm" style="background: #0284c7;" onclick="triggerDownload('all')">⬇ Tải Toàn Bộ</button>
+                <button class="btn btn-green btn-sm" id="btn-dl-missing" onclick="triggerDownload('missing')">⬇ Tải Chương Thiếu (Server)</button>
+                <button class="btn btn-sm" style="background: #0284c7;" onclick="triggerDownload('all')">⬇ Tải Toàn Bộ (Server)</button>
             </div>
 
             <div class="action-grid">
@@ -869,7 +871,12 @@
                 <button class="btn btn-outline btn-sm" onclick="downloadTxt()">📥 Tải File TXT</button>
             </div>
 
-            <button class="btn" style="width: 100%; background: #4f46e5; margin-top: 4px; font-size: 13px;" onclick="syncToPhoneOffline()">
+            <input type="file" id="input-txt-import" accept=".txt" style="display:none;" onchange="importTxtFile(event)">
+            <button class="btn btn-outline" style="width: 100%; border: 1.5px dashed #0284c7; color: #0284c7; font-weight: 700; margin-top: 6px; padding: 10px; font-size: 13px; background: #f0f9ff;" onclick="document.getElementById('input-txt-import').click()">
+                📁 Nạp File TXT Truyện Vào Bộ Nhớ Máy (Đọc Ngoại Tuyến)
+            </button>
+
+            <button class="btn" style="width: 100%; background: #4f46e5; margin-top: 6px; font-size: 13px;" onclick="syncToPhoneOffline()">
                 📱 Lưu Hết Vào Bộ Nhớ iPhone (Đọc Không Cần Wi-Fi)
             </button>
 
@@ -992,6 +999,7 @@
         let currentTab = 'lib';
         let previousTab = 'lib';
         let currentBookId = null;
+        let currentBookMeta = null;
         let currentChapters = [];
         let currentChapIndex = -1;
         let readerFontSize = 19;
@@ -1718,6 +1726,7 @@
 
         function renderChaptersUI(data, isOffline) {
             if (!data || !data.book) return;
+            currentBookMeta = data.book;
             document.getElementById('active-book-title').innerText = data.book.title + (isOffline ? ' (Ngoại tuyến)' : '');
             currentChapters = data.chapters || [];
             
@@ -1915,7 +1924,89 @@
             } catch(e) {}
         }
 
+        let isClientDownloading = false;
+        async function triggerClientBatchDownload() {
+            if (!currentBookId || !currentChapters.length) return;
+            if (isClientDownloading) {
+                alert('Một tiến trình tải bằng iPhone đang chạy!');
+                return;
+            }
+
+            // Find missing chapters on this phone
+            const missing = [];
+            currentChapters.forEach((c, idx) => {
+                const isLocal = !!localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`);
+                if (!isLocal) {
+                    missing.push({ c, idx });
+                }
+            });
+
+            if (!missing.length) {
+                alert('Tất cả các chương đã được lưu đầy đủ trên iPhone!');
+                return;
+            }
+
+            const limit = Math.min(missing.length, 50);
+            if (!confirm(`Bắt đầu tải ${limit} chương chưa lưu vào iPhone để đọc offline vĩnh viễn?`)) {
+                return;
+            }
+
+            isClientDownloading = true;
+            const progressBox = document.getElementById('dl-progress-box');
+            const progressFill = document.getElementById('dl-progress-fill');
+            const progressText = document.getElementById('dl-progress-text');
+            progressBox.style.display = 'block';
+
+            let success = 0;
+            let failed = 0;
+
+            for (let i = 0; i < limit; i++) {
+                if (!isClientDownloading) break;
+                const { c, idx } = missing[i];
+                const pct = Math.round(((i + 1) / limit) * 100);
+                progressFill.style.width = pct + '%';
+                progressText.innerText = `iPhone đang tải: ${i + 1}/${limit} (${pct}%) - ${c.chapter_title}`;
+
+                try {
+                    const res = await fetch(`/api/chapter/${currentBookId}/${c.chapter_id}`);
+                    const data = await res.json();
+                    if (data && data.content && data.content.trim().length > 0) {
+                        localStorage.setItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`, data.content);
+                        c.content = data.content;
+                        c.is_downloaded = 1;
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch(e) {
+                    failed++;
+                }
+
+                // Update UI counter
+                const statEl = document.getElementById('phone-storage-stat');
+                if (statEl) {
+                    let totalLocal = 0;
+                    currentChapters.forEach(ch => {
+                        if (localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${ch.chapter_id}`)) totalLocal++;
+                    });
+                    statEl.innerText = `iPhone lưu: ${totalLocal} chương (Đang tải...)`;
+                }
+
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            isClientDownloading = false;
+            progressFill.style.width = '100%';
+            progressText.innerText = `✅ Hoàn tất: Đã lưu ${success} chương vào iPhone!`;
+            refreshChaptersList();
+
+            setTimeout(() => {
+                if (!isClientDownloading) progressBox.style.display = 'none';
+            }, 3500);
+        }
+
         async function cancelDl() {
+            isClientDownloading = false;
             if (!currentBookId) return;
             await fetch(`/api/cancel_download/${currentBookId}`, {method: 'POST'});
         }
@@ -1978,6 +2069,144 @@
             }
         }
 
+        // Save currently viewed live chapter directly from clipboard or prompt
+        async function saveCurrentChapterFromClipboard(bookId, chapterId, chapterTitle, index) {
+            try {
+                let text = '';
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    try {
+                        text = await navigator.clipboard.readText();
+                    } catch(e) {}
+                }
+                if (!text || text.trim().length < 20) {
+                    text = prompt('Dán nội dung chương Sếp vừa copy từ Sáng Tác Việt / Safari vào đây để lưu ngoại tuyến:');
+                }
+                if (!text || text.trim().length < 20) {
+                    alert('Nội dung quá ngắn hoặc chưa có văn bản trong clipboard!');
+                    return;
+                }
+
+                const clean = text.trim();
+                // 1. Save to iPhone localStorage
+                localStorage.setItem(`${CACHE_PREFIX}${bookId}_${chapterId}`, clean);
+
+                // 2. Save to Server SQLite
+                try {
+                    await fetch('/api/save_chapter_content', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            book_fk: bookId,
+                            chapter_id: chapterId,
+                            chapter_title: chapterTitle || '',
+                            content: clean
+                        })
+                    });
+                } catch(e) {}
+
+                // 3. Update memory model
+                if (currentChapters && currentChapters[index]) {
+                    currentChapters[index].content = clean;
+                    currentChapters[index].is_downloaded = 1;
+                }
+
+                alert('✅ Đã lưu chương thành công vào bộ nhớ iPhone và Server!');
+                readChapter(index);
+            } catch(err) {
+                const manual = prompt('Dán nội dung chương vào đây:');
+                if (manual && manual.trim().length > 20) {
+                    const clean = manual.trim();
+                    localStorage.setItem(`${CACHE_PREFIX}${bookId}_${chapterId}`, clean);
+                    if (currentChapters && currentChapters[index]) {
+                        currentChapters[index].content = clean;
+                        currentChapters[index].is_downloaded = 1;
+                    }
+                    readChapter(index);
+                }
+            }
+        }
+
+        // Import TXT Novel File directly into current book
+        async function importTxtFile(event) {
+            const file = event.target.files[0];
+            if (!file || !currentBookId) return;
+
+            if (!confirm(`Sếp có muốn nạp file "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB) vào bộ truyện này không?\nHệ thống sẽ tự động tách chương và lưu thẳng vào máy iPhone!`)) {
+                event.target.value = '';
+                return;
+            }
+
+            const progressBox = document.getElementById('dl-progress-box');
+            const progressFill = document.getElementById('dl-progress-fill');
+            const progressText = document.getElementById('dl-progress-text');
+            progressBox.style.display = 'block';
+            progressFill.style.width = '10%';
+            progressText.innerText = 'Đang đọc file text từ iPhone...';
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const fullText = e.target.result;
+                progressText.innerText = 'Đang phân tích các chương...';
+                
+                // Split chapters by common Vietnamese and English novel markers
+                const rawParts = fullText.split(/(?:^|\n)(?=(?:Chương\s+[0-9]+|Hồi\s+[0-9]+|Thứ\s+[0-9]+\s+chương|Chapter\s+[0-9]+|Tiết\s+[0-9]+))/i);
+                const parsedChaps = rawParts.filter(p => p && p.trim().length > 50);
+
+                if (!parsedChaps.length) {
+                    alert('Không tìm thấy định dạng chương phù hợp trong file TXT! Hãy chắc chắn file có các tiêu đề "Chương 1...", "Chương 2..."');
+                    progressBox.style.display = 'none';
+                    return;
+                }
+
+                let savedCount = 0;
+                const total = Math.min(parsedChaps.length, currentChapters.length || parsedChaps.length);
+
+                for (let i = 0; i < total; i++) {
+                    const cText = parsedChaps[i].trim();
+                    const targetChap = currentChapters[i];
+                    const chapId = targetChap ? targetChap.chapter_id : String(i + 1);
+                    const chapTitle = targetChap ? targetChap.chapter_title : `Chương ${i + 1}`;
+
+                    // Save to iPhone localStorage
+                    localStorage.setItem(`${CACHE_PREFIX}${currentBookId}_${chapId}`, cText);
+                    if (targetChap) {
+                        targetChap.content = cText;
+                        targetChap.is_downloaded = 1;
+                    }
+
+                    // Sync to server SQLite in background
+                    try {
+                        fetch('/api/save_chapter_content', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                book_fk: currentBookId,
+                                chapter_id: chapId,
+                                chapter_title: chapTitle,
+                                content: cText
+                            })
+                        }).catch(() => {});
+                    } catch(err) {}
+
+                    savedCount++;
+                    if (i % 10 === 0 || i === total - 1) {
+                        const pct = Math.round(((i + 1) / total) * 100);
+                        progressFill.style.width = pct + '%';
+                        progressText.innerText = `Đã nạp vào iPhone: ${i + 1}/${total} chương (${pct}%)`;
+                    }
+                }
+
+                progressFill.style.width = '100%';
+                progressText.innerText = `✅ Hoàn tất! Đã nạp thành công ${savedCount} chương vào iPhone!`;
+                alert(`✅ Đã nạp thành công ${savedCount} chương từ file TXT vào bộ nhớ iPhone! Sếp có thể tắt mạng và đọc offline vĩnh viễn.`);
+                refreshChaptersList();
+                setTimeout(() => { progressBox.style.display = 'none'; }, 3000);
+            };
+
+            reader.readAsText(file, 'utf-8');
+            event.target.value = '';
+        }
+
         // ==================== READER ENGINE ====================
         async function readChapter(index) {
             currentChapIndex = index;
@@ -2023,29 +2252,55 @@
                             }
                         } catch(e) {}
                     } else {
+                        const stvUrl = data.stv_url || `https://sangtacviet.vip/truyen/${currentBookMeta ? currentBookMeta.host : 'qidian'}/1/${currentBookMeta ? currentBookMeta.book_id : ''}/${chap.chapter_id}/`;
                         bodyEl.innerHTML = `
-                            <div style="text-align: center; padding: 40px 16px; background: #ffffff; border: 1.5px solid #fecaca; border-radius: 14px; margin: 30px auto; max-width: 480px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-                                <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
-                                <div style="font-weight: 800; color: #b91c1c; font-size: 16px; margin-bottom: 6px;">Chưa Lấy Được Nội Dung Chương Này</div>
-                                <div style="font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 18px;">
-                                    Nguồn gốc Sáng Tác Việt có thể đang phản hồi chậm hoặc chương chưa có nội dung.
+                            <div style="display: flex; flex-direction: column; min-height: 85vh; padding: 0 4px;">
+                                <!-- Live Stream Banner -->
+                                <div style="background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 200px;">
+                                        <div style="font-weight: 800; color: #1e40af; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                                            <span>🌐 Đọc Trực Tiếp (Nguồn Sáng Tác Việt)</span>
+                                        </div>
+                                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                            Chương chưa tải về máy. Hệ thống đang stream trực tiếp bằng mạng iPhone của Sếp.
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                        <button class="btn btn-sm btn-green" onclick="saveCurrentChapterFromClipboard(${currentBookId}, '${chap.chapter_id}', '${(chap.chapter_title || '').replace(/'/g, "\\'")}', ${index})" style="padding: 6px 10px; font-size: 12px; font-weight: 700;">
+                                            📋 Lưu Từ Clipboard
+                                        </button>
+                                        <a href="${stvUrl}" target="_blank" class="btn btn-sm btn-outline" style="padding: 6px 10px; font-size: 12px; text-decoration: none;">
+                                            ↗️ Mở Safari
+                                        </a>
+                                    </div>
                                 </div>
-                                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                                    <button class="btn btn-sm btn-green" onclick="readChapter(${index})" style="padding: 10px 16px; font-weight: 700;">🔄 Thử Tải Lại Ngay</button>
-                                    <button class="btn btn-sm" onclick="nextChapter()" style="padding: 10px 16px; background: #0284c7; font-weight: 700;">Sang Chương Sau ⏭</button>
+
+                                <!-- Responsive STV Iframe Container -->
+                                <div style="flex: 1; border: 1.5px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #ffffff; box-shadow: 0 4px 16px rgba(0,0,0,0.06); height: 75vh;">
+                                    <iframe id="live-reader-frame" src="${stvUrl}" style="width: 100%; height: 100%; border: none; display: block;" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" loading="eager"></iframe>
                                 </div>
                             </div>
                         `;
                     }
                 } catch(e) {
+                    const stvUrl = `https://sangtacviet.vip/truyen/${currentBookMeta ? currentBookMeta.host : 'qidian'}/1/${currentBookMeta ? currentBookMeta.book_id : ''}/${chap.chapter_id}/`;
                     bodyEl.innerHTML = `
-                        <div style="text-align: center; padding: 40px 16px; background: #ffffff; border: 1.5px solid #fecaca; border-radius: 14px; margin: 30px auto; max-width: 480px;">
-                            <div style="font-size: 32px; margin-bottom: 10px;">📡</div>
-                            <div style="font-weight: 800; color: #b91c1c; font-size: 16px; margin-bottom: 6px;">Không Có Kết Nối Mạng</div>
-                            <div style="font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 18px;">
-                                Chương này chưa được lưu ngoại tuyến vào iPhone và không thể kết nối tới server.
+                        <div style="display: flex; flex-direction: column; min-height: 85vh; padding: 0 4px;">
+                            <div style="background: #fefce8; border: 1.5px solid #fde047; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div>
+                                    <div style="font-weight: 800; color: #854d0e; font-size: 13px;">🌐 Đang Kết Nối Đọc Nguồn Gốc...</div>
+                                    <div style="font-size: 11px; color: #713f12; margin-top: 2px;">Server ngoại tuyến. Đang mở luồng đọc trực tiếp từ Sáng Tác Việt.</div>
+                                </div>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <button class="btn btn-sm btn-green" onclick="saveCurrentChapterFromClipboard(${currentBookId}, '${chap.chapter_id}', '${(chap.chapter_title || '').replace(/'/g, "\\'")}', ${index})" style="padding: 6px 10px; font-size: 12px; font-weight: 700;">
+                                        📋 Lưu Từ Clipboard
+                                    </button>
+                                    <a href="${stvUrl}" target="_blank" class="btn btn-sm btn-outline" style="padding: 6px 10px; font-size: 12px; text-decoration: none;">↗️ Safari</a>
+                                </div>
                             </div>
-                            <button class="btn btn-sm btn-outline" onclick="readChapter(${index})" style="padding: 10px 16px;">🔄 Thử Kết Nối Lại</button>
+                            <div style="flex: 1; border: 1.5px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #ffffff; height: 75vh;">
+                                <iframe id="live-reader-frame" src="${stvUrl}" style="width: 100%; height: 100%; border: none; display: block;" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+                            </div>
                         </div>
                     `;
                 }
