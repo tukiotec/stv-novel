@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 import logging
@@ -128,7 +129,7 @@ class ChapterDownloaderWorker(QThread):
     async def _fetch_single_chapter(self, browser, host: str, book_id: str, chapter_id: str, timeout: int = 12) -> Optional[str]:
         return await fetch_single_chapter_content(browser, host, book_id, chapter_id, self.base_url, timeout)
 
-async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "http://14.225.254.182", timeout: int = 15) -> Optional[str]:
+async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter_id: str, base_url: str = "http://14.225.254.182", timeout: int = 12) -> Optional[str]:
     ctx = None
     try:
         ctx = await browser.new_context(
@@ -144,8 +145,18 @@ async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter
         except Exception:
             pass
 
-        await ctx.add_init_script('Object.defineProperty(navigator, "webdriver", { get: () => undefined });')
         page = await ctx.new_page()
+
+        # Block media, fonts, images and analytics to boost download speed 5-10x and save memory
+        async def block_junk(route):
+            rtype = route.request.resource_type
+            u = route.request.url
+            if rtype in ['image', 'media', 'font'] or 'google' in u or 'facebook' in u or 'tts' in u:
+                await route.abort()
+            else:
+                await route.continue_()
+
+        await page.route('**/*', block_junk)
 
         chapter_data = None
         ev = asyncio.Event()
@@ -165,32 +176,25 @@ async def fetch_single_chapter_content(browser, host: str, book_id: str, chapter
         url = f"{base_url}/truyen/{host}/1/{book_id}/{chapter_id}/"
 
         try:
-            await page.goto(url, wait_until='domcontentloaded', timeout=12000)
+            await page.goto(url, wait_until='domcontentloaded', timeout=10000)
         except Exception:
             pass
 
         # 1. Dismiss language modal if it appears
         try:
-            vi_btn = await page.wait_for_selector('text=Tiếng Việt', timeout=2000)
+            vi_btn = await page.wait_for_selector('text=Tiếng Việt', timeout=1500)
             if vi_btn:
                 await vi_btn.click()
         except Exception:
             pass
 
-        # 2. Simulate micro natural mouse movements
-        for x, y in [(60, 60), (140, 140), (240, 240)]:
-            await page.mouse.move(x, y)
-            await asyncio.sleep(0.05)
-
-        # 3. Trigger "Nhấp vào để tải chương" button if STV requires manual click
+        # 2. Trigger fetch via gotox() if available
         try:
-            load_btn = await page.wait_for_selector('text=Nhấp vào để tải chương', timeout=2000)
-            if load_btn:
-                await load_btn.click()
+            await page.evaluate('if(typeof gotox === "function") gotox();')
         except Exception:
             pass
 
-        # 4. Wait for AJAX response
+        # 3. Wait for AJAX response or DOM text
         try:
             await asyncio.wait_for(ev.wait(), timeout=timeout)
         except asyncio.TimeoutError:

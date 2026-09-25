@@ -1860,6 +1860,7 @@
             document.getElementById('input-range-to').value = currentChapters.length || 9999;
         }
 
+        let lastSyncedCount = 0;
         function pollDownloadProgress() {
             if (pollTimer) clearInterval(pollTimer);
             pollTimer = setInterval(async () => {
@@ -1875,11 +1876,17 @@
                         const pct = st.total > 0 ? Math.round((st.current / st.total) * 100) : 0;
                         document.getElementById('dl-progress-fill').style.width = pct + '%';
                         document.getElementById('dl-progress-text').innerText = `${st.current}/${st.total} (${pct}%) - ${st.current_title}`;
+
+                        // Đồng bộ cuốn chiếu từng chương vào iPhone ngay khi vừa tải xong
+                        if (st.success && st.success > lastSyncedCount) {
+                            lastSyncedCount = st.success;
+                            autoSyncToPhone(currentBookId);
+                        }
                     } else if (st.status === 'finished') {
                         clearInterval(pollTimer);
                         document.getElementById('dl-progress-fill').style.width = '100%';
-                        document.getElementById('dl-progress-text').innerText = `✅ Tải hoàn tất: ${st.success} thành công! (Tự động lưu vào iPhone...)`;
-                        autoSyncToPhone(currentBookId);
+                        document.getElementById('dl-progress-text').innerText = `✅ Tải hoàn tất: ${st.success} thành công!`;
+                        await autoSyncToPhone(currentBookId);
                         refreshChaptersList();
                         setTimeout(() => {
                             document.getElementById('dl-progress-box').style.display = 'none';
@@ -1887,12 +1894,13 @@
                     } else if (st.status === 'canceled') {
                         clearInterval(pollTimer);
                         document.getElementById('dl-progress-text').innerText = 'Đã dừng tải.';
+                        await autoSyncToPhone(currentBookId);
                         refreshChaptersList();
                     }
                 } catch(e) {
                     console.error(e);
                 }
-            }, 1000);
+            }, 1200);
         }
 
         async function checkDownloadStatus() {
@@ -2177,6 +2185,24 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
+
+        // Xử lý tự động nối lại tiến trình khi Sếp chuyển từ app khác quay lại
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (currentBookId) {
+                    checkDownloadStatus();
+                    autoSyncToPhone(currentBookId);
+                    refreshChaptersList();
+                } else if (currentTab === 'lib') {
+                    loadLibrary();
+                }
+            }
+        });
+        window.addEventListener('focus', () => {
+            if (currentBookId) {
+                checkDownloadStatus();
+            }
+        });
 
         // Initialize library
         loadLibrary();
