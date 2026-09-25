@@ -154,6 +154,25 @@ class STVDatabase:
         with self._get_conn() as conn:
             conn.execute("DELETE FROM books WHERE id = ?", (book_fk,))
 
+    def clear_downloaded_chapters(self, book_fk: int) -> int:
+        """
+        Xóa toàn bộ nội dung của các chương đã tải thuộc truyện này,
+        đưa is_downloaded về 0 để giải phóng dung lượng, nhưng vẫn giữ nguyên mục lục truyện.
+        """
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE chapters SET
+                    content = '',
+                    is_downloaded = 0,
+                    downloaded_at = NULL
+                WHERE book_fk = ? AND is_downloaded = 1
+            ''', (book_fk,))
+            cleared = cursor.rowcount
+            self._update_book_counts(conn, book_fk)
+            return cleared
+
+
     def get_chapters(self, book_fk: int, only_downloaded: bool = False) -> List[Dict]:
         with self._get_conn() as conn:
             cursor = conn.cursor()

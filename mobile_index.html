@@ -812,6 +812,7 @@
         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px;">
             <button class="btn btn-outline btn-sm" onclick="backFromChapters()">⬅ Quay lại</button>
             <div id="active-book-title" style="font-weight: 700; font-size: 15px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            <button class="btn btn-sm" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 6px 10px; font-size: 12px; font-weight: 700;" onclick="clearCurrentBookDownloads()">🧹 Xóa Tải</button>
             <button class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 10px; font-size: 12px;" onclick="deleteCurrentBook()">🗑️ Xóa Truyện</button>
         </div>
 
@@ -886,8 +887,12 @@
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div style="font-size: 13px; font-weight: 700; color: #1e3a8a;" id="chapters-stat">0 / 0 chương đã lưu</div>
-            <div style="font-size: 11px; color: #059669; font-weight: 600;" id="phone-storage-stat">Bộ nhớ máy: 0 chương</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="font-size: 11px; color: #059669; font-weight: 600;" id="phone-storage-stat">Bộ nhớ máy: 0 chương</span>
+                <button class="badge" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer; padding: 2px 8px; font-size: 11px; font-weight: 700;" onclick="clearCurrentBookDownloads()">🧹 Dọn Tải</button>
+            </div>
         </div>
+
         <div id="chapters-list" style="background: #fff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;"></div>
     </div>
 
@@ -1564,14 +1569,71 @@
                                     </span>
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                <button class="btn btn-sm btn-outline" style="padding: 5px 12px;" onclick="event.stopPropagation(); openBook(${b.id})">📖 Xem & Tải</button>
-                                <button class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 12px;" onclick="deleteBook(event, ${b.id}, '${titleSafe}')">🗑️ Xóa</button>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 6px;">
+                                <button class="btn btn-sm btn-outline" style="padding: 5px 10px; font-size: 11px;" onclick="event.stopPropagation(); openBook(${b.id})">📖 Xem & Tải</button>
+                                <button class="btn btn-sm" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 5px 10px; font-size: 11px; font-weight: 700;" onclick="clearBookDownloads(event, ${b.id}, '${titleSafe}')">🧹 Xóa Tải</button>
+                                <button class="btn btn-sm" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 10px; font-size: 11px;" onclick="deleteBook(event, ${b.id}, '${titleSafe}')">🗑️ Xóa</button>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        // Clear downloaded chapters handler (keep book & chapters metadata)
+        async function clearBookDownloads(event, bookId, bookTitle) {
+            if (event) event.stopPropagation();
+            if (!confirm(`Sếp có chắc chắn muốn XÓA NỘI DUNG CÁC CHƯƠNG ĐÃ TẢI của truyện "${bookTitle || 'này'}"?\n\n• Mục lục truyện vẫn giữ nguyên 100% trong tủ sách.\n• Giải phóng bộ nhớ máy iPhone và máy tính tức thì.\n• Sếp có thể tải lại bất cứ khi nào muốn!`)) {
+                return;
+            }
+            try {
+                const res = await fetch(`/api/book/${bookId}/clear_downloads`, { method: 'POST' });
+                const data = await res.json();
+
+                // Clear cached chapters of this book from iPhone localStorage
+                let clearedPhone = 0;
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(`${CACHE_PREFIX}${bookId}_`)) {
+                        localStorage.removeItem(key);
+                        clearedPhone++;
+                    }
+                }
+
+                // Update cached book metadata in localStorage
+                try {
+                    const cachedBookStr = localStorage.getItem(`stv_cached_book_${bookId}`);
+                    if (cachedBookStr) {
+                        const cb = JSON.parse(cachedBookStr);
+                        if (cb.chapters) {
+                            cb.chapters.forEach(c => {
+                                c.is_downloaded = 0;
+                                delete c.content;
+                            });
+                        }
+                        if (cb.book) {
+                            cb.book.downloaded_count = 0;
+                        }
+                        localStorage.setItem(`stv_cached_book_${bookId}`, JSON.stringify(cb));
+                    }
+                } catch(e) {}
+
+                alert(`✅ ${data.message || 'Đã dọn dẹp các chương đã tải!'}\n(Đồng thời đã dọn ${clearedPhone} chương trong bộ nhớ máy iPhone)`);
+
+                if (currentBookId === bookId && document.getElementById('view-chapters').style.display === 'block') {
+                    await openBook(bookId);
+                } else {
+                    await loadLibrary();
+                }
+            } catch(e) {
+                alert('Lỗi khi xóa dữ liệu chương: ' + e);
+            }
+        }
+
+        async function clearCurrentBookDownloads() {
+            if (!currentBookId) return;
+            const title = document.getElementById('active-book-title').innerText.replace(' (Ngoại tuyến)', '');
+            await clearBookDownloads(null, currentBookId, title);
         }
 
         // Delete book handler
@@ -1610,6 +1672,7 @@
             const title = document.getElementById('active-book-title').innerText;
             await deleteBook(null, currentBookId, title);
         }
+
 
         // Open Book Details / Download Center
         async function openBook(bookId) {

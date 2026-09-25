@@ -214,6 +214,30 @@ def delete_book(book_fk: int):
                 
     return JSONResponse({"status": "success", "message": f"Đã xóa truyện '{book['title']}' khỏi tủ sách!"})
 
+@app.post("/api/book/{book_fk}/clear_downloads")
+def clear_book_downloads(book_fk: int):
+    book = db.get_book_by_id(book_fk)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    cleared_count = db.clear_downloaded_chapters(book_fk)
+    
+    # Also clean export files if exist
+    for f_pattern in [f"book_{book_fk}.epub", f"export_{book_fk}.txt"]:
+        f_path = os.path.join(BASE_DIR, f_pattern)
+        if os.path.exists(f_path):
+            try:
+                os.remove(f_path)
+            except Exception:
+                pass
+                
+    return JSONResponse({
+        "status": "success",
+        "cleared_count": cleared_count,
+        "message": f"Đã xóa toàn bộ nội dung của {cleared_count} chương đã tải. Mục lục vẫn được giữ nguyên!"
+    })
+
+
 def get_browser_launch_kwargs():
     ares_chrome = r'D:\ares_chromium_build\src\out\Release\chrome.exe'
     kwargs = {
