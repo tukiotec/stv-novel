@@ -1518,24 +1518,11 @@
             }
         }
 
-        // Load Offline Library
-        async function loadLibrary() {
-            let books = [];
-            let isOffline = false;
-            try {
-                const res = await fetch('/api/books');
-                books = await res.json();
-                localStorage.setItem('stv_cached_books', JSON.stringify(books));
-            } catch(e) {
-                isOffline = true;
-                const local = localStorage.getItem('stv_cached_books');
-                if (local) {
-                    try { books = JSON.parse(local); } catch(err) {}
-                }
-            }
-
+        // Render Library UI helper
+        function renderLibraryList(books, isOffline) {
             const list = document.getElementById('books-list');
             const badge = document.getElementById('lib-count-badge');
+            if (!list || !badge) return;
             badge.innerText = `${books.length} truyện` + (isOffline ? ' (Ngoại tuyến)' : '');
 
             if (!books.length) {
@@ -1578,6 +1565,43 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        // Load Offline Library (Local-First: Instant 0ms render from localStorage, sync in background)
+        async function loadLibrary() {
+            let cachedBooks = [];
+            try {
+                const local = localStorage.getItem('stv_cached_books');
+                if (local) cachedBooks = JSON.parse(local);
+            } catch(e) {}
+
+            // 1. Render immediately from local cache (0ms instant display)
+            if (cachedBooks && cachedBooks.length > 0) {
+                renderLibraryList(cachedBooks, false);
+            }
+
+            // 2. Fetch fresh library from server in background with 6s timeout
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                const res = await fetch('/api/books', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const books = await res.json();
+                    if (Array.isArray(books)) {
+                        localStorage.setItem('stv_cached_books', JSON.stringify(books));
+                        renderLibraryList(books, false);
+                        return;
+                    }
+                }
+            } catch(e) {}
+
+            // Fallback if offline or server sleeping
+            if (cachedBooks && cachedBooks.length > 0) {
+                renderLibraryList(cachedBooks, true);
+            } else {
+                renderLibraryList([], true);
+            }
         }
 
         // Clear downloaded chapters handler (keep book & chapters metadata)
@@ -1692,26 +1716,8 @@
             switchTab(previousTab || 'lib');
         }
 
-        async function refreshChaptersList() {
-            let data = null;
-            let isOffline = false;
-            try {
-                const res = await fetch(`/api/book/${currentBookId}`);
-                data = await res.json();
-                localStorage.setItem(`stv_cached_book_${currentBookId}`, JSON.stringify(data));
-            } catch(e) {
-                isOffline = true;
-                const local = localStorage.getItem(`stv_cached_book_${currentBookId}`);
-                if (local) {
-                    try { data = JSON.parse(local); } catch(err) {}
-                }
-            }
-
-            if (!data) {
-                alert('Không có kết nối tới server máy tính và chưa có dữ liệu lưu ngoại tuyến!');
-                return;
-            }
-
+        function renderChaptersUI(data, isOffline) {
+            if (!data || !data.book) return;
             document.getElementById('active-book-title').innerText = data.book.title + (isOffline ? ' (Ngoại tuyến)' : '');
             currentChapters = data.chapters || [];
             
@@ -1741,6 +1747,41 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        async function refreshChaptersList() {
+            let cachedData = null;
+            try {
+                const local = localStorage.getItem(`stv_cached_book_${currentBookId}`);
+                if (local) cachedData = JSON.parse(local);
+            } catch(e) {}
+
+            // 1. Render immediately from local cache (0ms instant display)
+            if (cachedData && cachedData.book) {
+                renderChaptersUI(cachedData, false);
+            }
+
+            // 2. Sync from server in background with 6s timeout
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                const res = await fetch(`/api/book/${currentBookId}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.book) {
+                        localStorage.setItem(`stv_cached_book_${currentBookId}`, JSON.stringify(data));
+                        renderChaptersUI(data, false);
+                        return;
+                    }
+                }
+            } catch(e) {}
+
+            if (cachedData && cachedData.book) {
+                renderChaptersUI(cachedData, true);
+            } else {
+                alert('Chưa có kết nối tới server và chưa có dữ liệu lưu ngoại tuyến!');
+            }
         }
 
         // Download triggers

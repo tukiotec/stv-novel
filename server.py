@@ -86,11 +86,23 @@ def get_icon():
         return FileResponse(icon_path, media_type="image/png")
     raise HTTPException(status_code=404, detail="Icon not found")
 
+@app.get("/ping")
+@app.get("/healthz")
+def ping_check():
+    return JSONResponse({"status": "ok", "app": "STV Novel Studio", "service": "online"})
+
 @app.get("/sw.js")
 def get_service_worker():
     sw_path = os.path.join(BASE_DIR, "sw.js")
     if os.path.exists(sw_path):
-        return FileResponse(sw_path, media_type="application/javascript")
+        return FileResponse(
+            sw_path, 
+            media_type="application/javascript",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Service-Worker-Allowed": "/"
+            }
+        )
     raise HTTPException(status_code=404, detail="Service worker not found")
 
 @app.get("/STVNovel.ipa")
@@ -491,22 +503,6 @@ def index_page():
             return HTMLResponse(f.read())
     return HTMLResponse("<h1>STV Novel Server Running</h1>")
 
-@app.get("/sw.js")
-def service_worker():
-    sw_code = """
-    const CACHE_NAME = 'stv-mobile-v2';
-    self.addEventListener('install', (e) => {
-        e.waitUntil(
-            caches.open(CACHE_NAME).then((cache) => cache.addAll(['/', '/manifest.json', '/icon.png']))
-        );
-    });
-    self.addEventListener('fetch', (e) => {
-        e.respondWith(
-            fetch(e.request).catch(() => caches.match(e.request))
-        );
-    });
-    """
-    return Response(content=sw_code, media_type="application/javascript")
 
 def generate_qr_code(url: str):
     if not qrcode:

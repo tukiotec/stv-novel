@@ -1,10 +1,12 @@
-const CACHE_NAME = 'stv-novel-pwa-v1';
+// STV Novel Studio - High Performance PWA Service Worker (Grok-like Instant Cache-First)
+const CACHE_NAME = 'stv-novel-pwa-v3';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
     '/icon.png'
 ];
 
+// 1. Install Event: Cache App Shell immediately and skip waiting
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -14,6 +16,7 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
+// 2. Activate Event: Clean up old caches and claim all clients instantly
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
@@ -29,36 +32,46 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+// 3. Fetch Event: Instant App Shell Loading (Cache-First with Background Revalidation)
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
+    const req = event.request;
+    if (req.method !== 'GET') return;
 
-    // Only handle GET requests
-    if (event.request.method !== 'GET') return;
+    const url = new URL(req.url);
 
-    // For HTML navigation requests, use Network First, fallback to Cache
-    if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    // [RULE 1] Navigation & App Shell (/) - INSTANT LAUNCH (< 5ms)
+    // Always serve from cache first so the app opens instantly on iPhone Home Screen like Grok
+    if (req.mode === 'navigate' || url.pathname === '/' || req.headers.get('accept')?.includes('text/html')) {
         event.respondWith(
-            fetch(event.request)
-                .then((response) => {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match('/') || caches.match(event.request);
-                })
+            caches.match('/').then((cachedResponse) => {
+                // Background update: Revalidate app shell in the background without blocking UI
+                const networkFetch = fetch(req).then((networkResponse) => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        const copy = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+                    }
+                    return networkResponse;
+                }).catch(() => {
+                    // Offline or server sleeping, perfectly fine
+                });
+
+                // Return instant cached shell if available, otherwise wait for network
+                return cachedResponse || networkFetch;
+            })
         );
         return;
     }
 
-    // For static assets (/icon.png, /manifest.json)
+    // [RULE 2] Static Assets (/icon.png, /manifest.json) - Cache First
     if (STATIC_ASSETS.includes(url.pathname)) {
         event.respondWith(
-            caches.match(event.request).then((cached) => {
+            caches.match(req).then((cached) => {
                 if (cached) return cached;
-                return fetch(event.request).then((response) => {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                return fetch(req).then((response) => {
+                    if (response && response.status === 200) {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+                    }
                     return response;
                 });
             })
@@ -66,10 +79,24 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // For other requests, try network first
+    // [RULE 3] API Requests (/api/...) - Network First with Graceful Fallback
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(
+            fetch(req).catch(() => {
+                // Return offline JSON message instead of letting browser hang
+                return new Response(JSON.stringify({
+                    error: "offline",
+                    message: "Đang ở chế độ ngoại tuyến hoặc máy chủ đang khởi động lại."
+                }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            })
+        );
+        return;
+    }
+
+    // Default fallback: Try network, then cache
     event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
-        })
+        fetch(req).catch(() => caches.match(req))
     );
 });
