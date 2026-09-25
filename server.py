@@ -2,7 +2,11 @@ import os
 import sys
 import socket
 import uvicorn
-import qrcode
+try:
+    import qrcode
+except ImportError:
+    qrcode = None
+
 import asyncio
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
@@ -15,12 +19,21 @@ if sys.stdout is not None:
     except Exception:
         pass
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, os.path.dirname(BASE_DIR))
 
-from stv_novel_app.db import STVDatabase
-from stv_novel_app.api import parse_story_input, fetch_book_metadata, fetch_chapter_list, search_stv, fetch_book_details_and_comments
-from stv_novel_app.downloader import fetch_single_chapter_content
-from stv_novel_app.epub_builder import create_epub
+try:
+    from stv_novel_app.db import STVDatabase
+    from stv_novel_app.api import parse_story_input, fetch_book_metadata, fetch_chapter_list, search_stv, fetch_book_details_and_comments
+    from stv_novel_app.downloader import fetch_single_chapter_content
+    from stv_novel_app.epub_builder import create_epub
+except (ImportError, ValueError):
+    from db import STVDatabase
+    from api import parse_story_input, fetch_book_metadata, fetch_chapter_list, search_stv, fetch_book_details_and_comments
+    from downloader import fetch_single_chapter_content
+    from epub_builder import create_epub
+
 
 app = FastAPI(title="STV Novel Mobile Server")
 
@@ -496,18 +509,24 @@ def service_worker():
     return Response(content=sw_code, media_type="application/javascript")
 
 def generate_qr_code(url: str):
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=8,
-        border=3,
-    )
-    qr.add_data(url)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    qr_path = os.path.join(ASSETS_DIR, "iphone_qr.png")
-    img.save(qr_path)
-    return qr_path
+    if not qrcode:
+        return ""
+    try:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=8,
+            border=3,
+        )
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        qr_path = os.path.join(ASSETS_DIR, "iphone_qr.png")
+        img.save(qr_path)
+        return qr_path
+    except Exception:
+        return ""
+
 
 def start_server(port=8899):
     lan_ip = "192.168.0.51"

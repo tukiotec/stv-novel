@@ -2,10 +2,29 @@ import asyncio
 import json
 import logging
 from typing import List, Tuple, Optional
-from PyQt6.QtCore import QThread, pyqtSignal
+try:
+    from PyQt6.QtCore import QThread, pyqtSignal
+except ImportError:
+    class QThread:
+        def __init__(self, *args, **kwargs): pass
+        def start(self): pass
+    class FakeSignal:
+        def emit(self, *args, **kwargs): pass
+        def connect(self, *args, **kwargs): pass
+    def pyqtSignal(*args, **kwargs):
+        return FakeSignal()
 
-from .api import clean_chapter_content
-from .db import STVDatabase
+try:
+    from .api import clean_chapter_content
+    from .db import STVDatabase
+except (ImportError, ValueError):
+    try:
+        from stv_novel_app.api import clean_chapter_content
+        from stv_novel_app.db import STVDatabase
+    except (ImportError, ValueError):
+        from api import clean_chapter_content
+        from db import STVDatabase
+
 
 logger = logging.getLogger("STVDownloader")
 
