@@ -70,16 +70,21 @@ class ChapterDownloaderWorker(QThread):
         pw = None
         browser = None
         try:
-            pw = await async_playwright().start()
-            browser = await pw.chromium.launch(
-                executable_path=r'D:\ares_chromium_build\src\out\Release\chrome.exe',
-                headless=True,
-                args=[
+            ares_chrome = r'D:\ares_chromium_build\src\out\Release\chrome.exe'
+            launch_args = {
+                'headless': True,
+                'args': [
                     '--disable-blink-features=AutomationControlled',
                     '--no-sandbox',
                     '--disable-gpu'
                 ]
-            )
+            }
+            if os.path.exists(ares_chrome):
+                launch_args['executable_path'] = ares_chrome
+
+            pw = await async_playwright().start()
+            browser = await pw.chromium.launch(**launch_args)
+
 
             for idx, (c_id, c_title) in enumerate(self.chapters, start=1):
                 if not self._is_running:
