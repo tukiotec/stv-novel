@@ -1728,12 +1728,27 @@
 
             // Check how many are saved locally on this iPhone
             let phoneCached = 0;
+            let missingLocal = 0;
             currentChapters.forEach(c => {
                 if (localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`)) {
                     phoneCached++;
+                } else if (c.is_downloaded) {
+                    missingLocal++;
                 }
             });
-            document.getElementById('phone-storage-stat').innerText = `iPhone lưu: ${phoneCached} chương`;
+            document.getElementById('phone-storage-stat').innerText = `iPhone lưu: ${phoneCached} chương` + (missingLocal > 0 ? ` (Đang đồng bộ ${missingLocal} chương...)` : '');
+
+            // Auto sync downloaded chapters to iPhone storage in background
+            if (!isOffline && missingLocal > 0) {
+                autoSyncToPhone(currentBookId).then(() => {
+                    let updatedCached = 0;
+                    currentChapters.forEach(c => {
+                        if (localStorage.getItem(`${CACHE_PREFIX}${currentBookId}_${c.chapter_id}`)) updatedCached++;
+                    });
+                    const statEl = document.getElementById('phone-storage-stat');
+                    if (statEl) statEl.innerText = `iPhone lưu: ${updatedCached} chương (Đã lưu xong ✅)`;
+                });
+            }
 
             const list = document.getElementById('chapters-list');
             list.innerHTML = currentChapters.map((c, idx) => {
@@ -1863,11 +1878,12 @@
                     } else if (st.status === 'finished') {
                         clearInterval(pollTimer);
                         document.getElementById('dl-progress-fill').style.width = '100%';
-                        document.getElementById('dl-progress-text').innerText = `✅ Tải hoàn tất: ${st.success} thành công!`;
+                        document.getElementById('dl-progress-text').innerText = `✅ Tải hoàn tất: ${st.success} thành công! (Tự động lưu vào iPhone...)`;
+                        autoSyncToPhone(currentBookId);
                         refreshChaptersList();
                         setTimeout(() => {
                             document.getElementById('dl-progress-box').style.display = 'none';
-                        }, 3000);
+                        }, 3500);
                     } else if (st.status === 'canceled') {
                         clearInterval(pollTimer);
                         document.getElementById('dl-progress-text').innerText = 'Đã dừng tải.';
@@ -1894,6 +1910,31 @@
         async function cancelDl() {
             if (!currentBookId) return;
             await fetch(`/api/cancel_download/${currentBookId}`, {method: 'POST'});
+        }
+
+        // Automatic background sync downloaded chapters to iPhone localStorage
+        async function autoSyncToPhone(bookId) {
+            if (!bookId) return;
+            try {
+                const res = await fetch(`/api/sync_offline/${bookId}`);
+                if (!res.ok) return;
+                const d = await res.json();
+                if (d.chapters && d.chapters.length) {
+                    d.chapters.forEach(c => {
+                        if (c.content && c.content.trim()) {
+                            localStorage.setItem(`${CACHE_PREFIX}${bookId}_${c.chapter_id}`, c.content);
+                        }
+                    });
+                    
+                    const activeTitle = document.getElementById('active-book-title')?.innerText?.replace(' (Ngoại tuyến)', '') || '';
+                    if (currentChapters && currentChapters.length) {
+                        localStorage.setItem(`stv_cached_book_${bookId}`, JSON.stringify({
+                            book: {id: bookId, title: activeTitle},
+                            chapters: currentChapters
+                        }));
+                    }
+                }
+            } catch(e) {}
         }
 
         async function syncToPhoneOffline() {
