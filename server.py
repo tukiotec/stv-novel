@@ -66,6 +66,10 @@ class SaveChapterReq(BaseModel):
     chapter_title: Optional[str] = ""
     content: str
 
+class BatchSaveChaptersReq(BaseModel):
+    book_fk: int
+    chapters: list
+
 @app.get("/manifest.json")
 def get_manifest():
     return JSONResponse({
@@ -300,6 +304,13 @@ async def get_chapter(book_fk: int, chapter_id: str):
         chap['stv_url'] = f"https://sangtacviet.vip/truyen/{book['host']}/1/{book['book_id']}/{chapter_id}/"
 
     return JSONResponse(chap)
+
+@app.post("/api/batch_save_chapters")
+def api_batch_save_chapters(req: BatchSaveChaptersReq):
+    if not req.book_fk or not req.chapters:
+        raise HTTPException(status_code=400, detail="Thiếu dữ liệu bắt buộc")
+    saved = db.batch_save_chapters(req.book_fk, req.chapters)
+    return JSONResponse({"status": "success", "saved_count": saved, "message": f"Đã lưu thành công {saved} chương vào database!"})
 
 async def run_batch_download(book_fk: int, items: list):
     from playwright.async_api import async_playwright

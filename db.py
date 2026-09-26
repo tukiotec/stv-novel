@@ -172,6 +172,45 @@ class STVDatabase:
             self._update_book_counts(conn, book_fk)
             return cleared
 
+    def batch_save_chapters(self, book_fk: int, chapters_data: List[Dict]) -> int:
+        """
+        Lưu hàng loạt chương truyện vào SQLite bằng một giao dịch đơn (single transaction) siêu tốc.
+        chapters_data: List of {'chapter_id': str, 'chapter_title': str, 'chapter_index': int, 'content': str}
+        """
+        saved = 0
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            for chap in chapters_data:
+                c_id = str(chap.get('chapter_id', '')).strip()
+                c_title = chap.get('chapter_title', '').strip()
+                c_content = chap.get('content', '')
+                c_idx = chap.get('chapter_index', 0)
+                if not c_id or not c_content:
+                    continue
+
+                cursor.execute("SELECT id FROM chapters WHERE book_fk = ? AND chapter_id = ?", (book_fk, c_id))
+                row = cursor.fetchone()
+                if row:
+                    cursor.execute('''
+                        UPDATE chapters SET
+                            content = ?,
+                            chapter_title = CASE WHEN ? != '' THEN ? ELSE chapter_title END,
+                            is_downloaded = 1,
+                            downloaded_at = CURRENT_TIMESTAMP
+                        WHERE book_fk = ? AND chapter_id = ?
+                    ''', (c_content, c_title, c_title, book_fk, c_id))
+                else:
+                    if not c_idx or c_idx <= 0:
+                        cursor.execute("SELECT COALESCE(MAX(chapter_index), 0) + 1 as next_idx FROM chapters WHERE book_fk = ?", (book_fk,))
+                        c_idx = cursor.fetchone()['next_idx']
+                    cursor.execute('''
+                        INSERT INTO chapters (book_fk, chapter_id, chapter_index, chapter_title, content, is_downloaded, downloaded_at)
+                        VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                    ''', (book_fk, c_id, c_idx, c_title or f"Chương {c_idx}", c_content))
+                saved += 1
+            self._update_book_counts(conn, book_fk)
+        return saved
+
 
     def get_chapters(self, book_fk: int, only_downloaded: bool = False) -> List[Dict]:
         with self._get_conn() as conn:
