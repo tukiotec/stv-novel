@@ -2324,34 +2324,38 @@
                     const stvUrl = (serverData && serverData.stv_url) ? serverData.stv_url : `https://sangtacviet.vip/truyen/${host}/1/${bookCode}/${chap.chapter_id}/`;
                     const safeTitle = (chap.chapter_title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
-                    // THẺ ĐIỀU HƯỚNG ĐỌC VÀ LƯU THÔNG MINH - HOÀN TOÀN KHÔNG DÙNG IFRAME
+                    // TRÌNH ĐỌC TRỰC TIẾP TỪ NGUỒN SÁNG TÁC VIỆT BẰNG MẠNG IPHONE THẬT (KHÔNG DÙNG SANDBOX GÂY CHẶN COOKIE)
                     bodyEl.innerHTML = `
-                        <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; padding: 24px 18px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
-                            <div style="font-size: 36px; margin-bottom: 10px;">📖</div>
-                            <div style="font-size: 17px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px;">
-                                Chương Này Chưa Có Nội Dung Ngoại Tuyến
-                            </div>
-                            <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 22px;">
-                                Sếp có thể mở đọc trực tiếp bằng Safari trên Sáng Tác Việt, hoặc dán nội dung vào đây để lưu đọc trọn đời không cần mạng.
-                            </div>
-
-                            <div style="display: flex; flex-direction: column; gap: 10px; max-width: 420px; margin: 0 auto;">
-                                <a href="${stvUrl}" target="_blank" class="btn" style="background: #2563eb; color: #fff; padding: 13px 16px; font-size: 14.5px; font-weight: 800; border-radius: 10px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(37,99,235,0.25);">
-                                    <span>🌐</span> Mở Đọc Trên Safari (Nguồn STV) ↗️
-                                </a>
-
-                                <button class="btn btn-green" onclick="openPasteModal(${currentBookId}, '${chap.chapter_id}', '${safeTitle}', ${index})" style="padding: 13px 16px; font-size: 14.5px; font-weight: 800; border-radius: 10px; box-shadow: 0 3px 10px rgba(16,185,129,0.2);">
-                                    📋 Dán & Lưu Vào Máy (Offline Trọn Đời)
-                                </button>
-
-                                <button class="btn btn-outline" onclick="document.getElementById('input-txt-import').click()" style="padding: 11px 16px; font-size: 13px; font-weight: 700; border-radius: 10px;">
-                                    📁 Nạp File TXT Toàn Bộ Truyện (Siêu Tốc)
-                                </button>
+                        <div style="display: flex; flex-direction: column; min-height: 82vh; padding: 0;">
+                            <!-- Header Toolbar điều khiển -->
+                            <div style="background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 180px;">
+                                    <div style="font-weight: 800; color: #1e40af; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                                        <span>🌐</span> Đang Stream Nguồn Sáng Tác Việt
+                                    </div>
+                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                        Đọc trực tiếp bằng mạng 4G iPhone. Chạm vào chữ bên dưới để tải trang.
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <button class="btn btn-sm btn-green" onclick="openPasteModal(${currentBookId}, '${chap.chapter_id}', '${safeTitle}', ${index})" style="padding: 6px 10px; font-size: 12px; font-weight: 700;">
+                                        💾 Lưu Offline
+                                    </button>
+                                    <a href="${stvUrl}" target="_blank" class="btn btn-sm btn-outline" style="padding: 6px 10px; font-size: 12px; text-decoration: none;">
+                                        ↗️ Mở Safari
+                                    </a>
+                                </div>
                             </div>
 
-                            <div style="display: flex; justify-content: space-between; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+                            <!-- Khung đọc nhúng trực tiếp không sandbox -->
+                            <div style="flex: 1; border: 1.5px solid #cbd5e1; border-radius: 12px; overflow: hidden; background: #ffffff; min-height: 72vh; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+                                <iframe id="stv-live-stream-frame" src="${stvUrl}" style="width: 100%; height: 72vh; border: none; display: block;" allow="autoplay; clipboard-read; clipboard-write"></iframe>
+                            </div>
+
+                            <!-- Thanh chuyển chương đáy -->
+                            <div style="display: flex; justify-content: space-between; margin-top: 10px; padding: 8px 4px;">
                                 <button class="btn btn-outline btn-sm" onclick="prevChapter()" ${index <= 0 ? 'disabled' : ''}>⏮ Chương Trước</button>
-                                <button class="btn btn-outline btn-sm" onclick="nextChapter()" ${index >= currentChapters.length - 1 ? 'disabled' : ''}>Chương Sau ⏭</button>
+                                <button class="btn btn-sm" onclick="nextChapter()" ${index >= currentChapters.length - 1 ? 'disabled' : ''}>Chương Sau ⏭</button>
                             </div>
                         </div>
                     `;
